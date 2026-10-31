@@ -1,0 +1,13 @@
+{
+  "passed": 7,
+  "checks": [
+    "JWT login connects the real local API",
+    "Subscription form writes to SQLite through REST",
+    "Server-enforced confirm and activate work in the drawer",
+    "Billing and invoice confirmation round-trip through REST",
+    "Record payment updates the real invoice to Paid",
+    "Advanced product editor performs authenticated PUT",
+    "Customer login receives only owned server-paginated records"
+  ],
+  "errors": []
+}
