@@ -1,0 +1,16 @@
+{
+  "passed": 10,
+  "checks": [
+    "Desktop dashboard renders and fits viewport",
+    "Create subscription with customer, plan and terms",
+    "Confirm, activate, pause and resume subscription",
+    "Billing creates invoices and repeat runs skip duplicate periods",
+    "Invoice PDF downloads locally",
+    "Global search opens and finds subscriptions",
+    "Every workspace navigation page renders",
+    "Customer preview hides staff navigation and scopes rows",
+    "Mobile navigation, layout and dashboard fit 390px",
+    "No browser runtime errors"
+  ],
+  "errors": []
+}

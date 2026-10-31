@@ -1,0 +1,5 @@
+backend/data/
+dist-api/
+artifacts/
+.env
+.agon-env/

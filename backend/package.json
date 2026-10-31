@@ -1,0 +1,1 @@
+{"name":"brightloop-api","private":true,"type":"module","scripts":{"start":"cd .. && node backend/server.mjs","seed":"cd .. && node backend/seed.mjs","test":"cd .. && node --test backend/tests/*.test.mjs"}}

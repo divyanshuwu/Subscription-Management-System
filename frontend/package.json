@@ -1,0 +1,1 @@
+{"name":"brightloop-frontend","private":true,"type":"module","scripts":{"dev":"cd .. && vite --host 127.0.0.1","build":"cd .. && npm run build"}}
