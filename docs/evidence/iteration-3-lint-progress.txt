@@ -1,0 +1,19 @@
+
+> brightloop-subscription-workspace@0.0.0 lint
+> eslint .
+
+
+/home/user/Subscription-Management-System/backend/app.mjs
+  1047:25  error  'next' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/home/user/Subscription-Management-System/backend/db.mjs
+  55:15  error  Empty block statement  no-empty
+
+/home/user/Subscription-Management-System/backend/services.mjs
+  99:38  error  'remaining' is defined but never used. Allowed unused args must match /^_/u  no-unused-vars
+
+/home/user/Subscription-Management-System/backend/tests/system.test.mjs
+  12:49  error  'decode' is assigned a value but never used  no-unused-vars
+
+✖ 4 problems (4 errors, 0 warnings)
+

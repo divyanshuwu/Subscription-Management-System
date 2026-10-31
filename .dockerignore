@@ -1,0 +1,13 @@
+.git
+node_modules
+dist
+dist-api
+artifacts
+coverage
+.env
+.env.*
+!.env.example
+backend/data/*
+!backend/data/.gitkeep
+docs/evidence
+public/downloads

@@ -1,0 +1,62 @@
+
+> brightloop-subscription-workspace@0.0.0 test:postgres
+> node scripts/postgres_test.mjs
+
+
+PostgreSQL isolated schema jury_cd8da2f26614db89: backend/tests/system.test.mjs
+✔ M1: server rejects weak password; unique emails are case-insensitive (723.087001ms)
+✔ M1: unauthenticated calls are 401; customer and staff cannot add staff (314.533398ms)
+✔ M1: refresh tokens rotate and cannot be replayed (318.443962ms)
+✔ M2/M3: admin catalog CRUD, variant delta, plan availability, staff mutation 403 (36.501067ms)
+✔ M4: quote conversion is atomic, single-use, and rejects expired quotes (35.794015ms)
+✔ M5: illegal transitions return 409; pause and resume follow state machine (50.281324ms)
+✔ M7: expired and exhausted discounts are skipped; line tax precedes discount (20.87341ms)
+✔ M6: billing twice never duplicates an invoice; billing run scan is logged (33.127358ms)
+✔ M6/M7: confirmation consumes a capped discount exactly once (23.581739ms)
+✔ M8: partial payment stays Confirmed; exact balance transitions to Paid (19.129731ms)
+✔ M8: cancelled invoices, future payments, and overpayment are rejected (22.194389ms)
+✔ M9: server-side customer isolation covers lists, records, PDF and mutations (19.04827ms)
+✔ M6/M11: PDF is generated locally; notifications are idempotent (42.983533ms)
+✔ M10/M11: paginated date-bound reports, summaries and mutation audits (29.395216ms)
+✔ M1: reset tokens are expiring, single-use and password policy is enforced (602.803358ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2728.711584
+
+PostgreSQL isolated schema jury_844387edaf9afe13: backend/tests/hardening.test.mjs
+✔ regression: old active subscriptions and catalog records remain visible (200.153593ms)
+✔ regression: quotation price remains frozen across catalog edits (104.454684ms)
+✔ regression: confirmation preserves historical tax and discount snapshot (68.016122ms)
+✔ regression: pause/resume retains accrued unbilled periods (65.414319ms)
+✔ paused intervals skip only periods starting inside the pause and retain anchor (38.481534ms)
+✔ closing preserves previously accrued charges (41.969615ms)
+✔ regression: draft debt excluded and old confirmed debt reconciles with aging (44.487006ms)
+✔ regression: sub-cent payments rejected before creating zero-value entries (14.131072ms)
+✔ regression: full Draft to Quotation to Confirmed to Active sequence (25.709604ms)
+✔ billing anchors recover month-end and leap-year anniversaries (5.999415ms)
+✔ regression: historical revenue is independent of materialized summaries (10.099478ms)
+✔ versioned migration is repeatable and retains existing records (22.378405ms)
+✔ parallel confirmation never overspends final discount capacity (12.77942ms)
+✔ amendments preserve agreed prices, apply prospectively, and reject stale revisions (45.655716ms)
+✔ portal amendments enforce ownership, prevent contract overrides and keep cost private (27.101222ms)
+✔ global server search finds old records outside cached pages and scopes customers (29.605824ms)
+✔ session version revokes previously issued access tokens immediately (24.663166ms)
+✔ SMTP sends clickable resets and PDF attachments; failed delivery retries with one worker claim (426.129352ms)
+✔ payment retry keys prevent duplicate partial payments and reject changed payloads (28.529583ms)
+✔ add-on line is scheduled and can be removed without rewriting issued service (26.454811ms)
+✔ 500 due subscriptions survive two overlapping billing workers without duplicate periods (2800.378569ms)
+✔ failed pricing rolls back cursor/invoice and does not auto-close away unbilled debt (35.033475ms)
+✔ minimum seat quantity applies to the plan product, not an independent add-on (12.866594ms)
+ℹ tests 23
+ℹ suites 0
+ℹ pass 23
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4531.175471

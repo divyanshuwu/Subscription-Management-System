@@ -6,7 +6,11 @@ import { db, id, now, audit } from "./db.mjs";
 import { email } from "./services.mjs";
 export const secret = () => {
   const value = process.env.JWT_SECRET;
-  if (!value || value.length < 32)
+  if (
+    !value ||
+    value.length < 32 ||
+    (process.env.NODE_ENV === "production" && value.startsWith("replace-with-"))
+  )
     throw new Error(
       "JWT_SECRET must contain at least 32 characters. Copy .env.example to .env.",
     );
@@ -46,9 +50,18 @@ export async function auth(req, res, next) {
       issuer: "brightloop",
       audience: "brightloop-local",
     });
-    const current = await db("users").where({id:req.user.sub}).select("role", "token_version").first();
-    if (!current || current.role !== req.user.role || current.token_version !== (req.user.ver || 0))
-      return res.status(401).json({error:"Session revoked; please sign in again"});
+    const current = await db("users")
+      .where({ id: req.user.sub })
+      .select("role", "token_version")
+      .first();
+    if (
+      !current ||
+      current.role !== req.user.role ||
+      current.token_version !== (req.user.ver || 0)
+    )
+      return res
+        .status(401)
+        .json({ error: "Session revoked; please sign in again" });
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired access token" });
@@ -79,13 +92,17 @@ async function tokens(user, trx = db) {
   });
   return {
     user: publicUser(user),
-    access_token: jwt.sign({ role: user.role, name: user.name, ver: user.token_version || 0 }, secret(), {
-      algorithm: "HS256",
-      subject: user.id,
-      expiresIn: "15m",
-      issuer: "brightloop",
-      audience: "brightloop-local",
-    }),
+    access_token: jwt.sign(
+      { role: user.role, name: user.name, ver: user.token_version || 0 },
+      secret(),
+      {
+        algorithm: "HS256",
+        subject: user.id,
+        expiresIn: "15m",
+        issuer: "brightloop",
+        audience: "brightloop-local",
+      },
+    ),
     refresh_token: refresh,
   };
 }
@@ -148,9 +165,11 @@ export function authRoutes(app, limiter) {
     res.json(result);
   });
   app.post("/api/auth/logout", auth, async (req, res) => {
-    await db.transaction(async trx => {
-      await trx("refresh_tokens").where({user_id:req.user.sub}).delete();
-      await trx("users").where({id:req.user.sub}).increment("token_version",1);
+    await db.transaction(async (trx) => {
+      await trx("refresh_tokens").where({ user_id: req.user.sub }).delete();
+      await trx("users")
+        .where({ id: req.user.sub })
+        .increment("token_version", 1);
     });
     res.json({ message: "Signed out" });
   });
@@ -197,7 +216,10 @@ export function authRoutes(app, limiter) {
         .where({ id: row.id, used: false })
         .update({ used: true });
       if (!used) fail(409, "Token already used");
-      await trx("users").where({ id: row.user_id }).update({ password_hash }).increment("token_version",1);
+      await trx("users")
+        .where({ id: row.user_id })
+        .update({ password_hash })
+        .increment("token_version", 1);
       await trx("refresh_tokens").where({ user_id: row.user_id }).delete();
       await audit(
         trx,

@@ -1,0 +1,10 @@
+{
+  "static_html": 200,
+  "health": 200,
+  "unauthenticated_business_api": 401,
+  "security_headers": true,
+  "external_recording_removed": true,
+  "login": true,
+  "consistent_backup_and_integrity_check": true,
+  "container_build": "Dockerfile supplied; Docker engine not exercised"
+}

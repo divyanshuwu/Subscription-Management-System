@@ -20,9 +20,13 @@ seed.on("exit", (code) => {
   const api = spawn(process.execPath, ["backend/server.mjs"], {
     stdio: "inherit",
   });
-  const ui = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1"], {
-    stdio: "inherit",
-  });
+  const ui = spawn(
+    "npm",
+    ["run", "dev", "--", "--host", process.env.UI_HOST || "127.0.0.1"],
+    {
+      stdio: "inherit",
+    },
+  );
   for (const sig of ["SIGINT", "SIGTERM"])
     process.on(sig, () => {
       api.kill(sig);

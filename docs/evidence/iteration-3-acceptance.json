@@ -1,0 +1,156 @@
+{
+  "dataset": {
+    "subscriptions": 10000,
+    "invoices": 60000,
+    "payments": 30000
+  },
+  "environment": "Node 24, SQLite memory, headless Chromium, local same-origin HTTP",
+  "api": [
+    {
+      "endpoint": "/subscriptions",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 17,
+      "max_ms": 22
+    },
+    {
+      "endpoint": "/invoices",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 17,
+      "max_ms": 18
+    },
+    {
+      "endpoint": "/invoices/outstanding",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 111,
+      "max_ms": 111
+    },
+    {
+      "endpoint": "/payments",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 41,
+      "max_ms": 41
+    },
+    {
+      "endpoint": "/dashboard/summary",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 134,
+      "max_ms": 134
+    },
+    {
+      "endpoint": "/reports/aging",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 71,
+      "max_ms": 71
+    },
+    {
+      "endpoint": "/analytics/revenue",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 413,
+      "max_ms": 414
+    },
+    {
+      "endpoint": "/search?search=ACCEPT",
+      "requests": 50,
+      "concurrency": 5,
+      "p95_ms": 68,
+      "max_ms": 68
+    }
+  ],
+  "pages": [
+    {
+      "page": "Overview cold navigation/reload 1",
+      "elapsed_ms": 1057
+    },
+    {
+      "page": "Overview cold navigation/reload 2",
+      "elapsed_ms": 517
+    },
+    {
+      "page": "Overview cold navigation/reload 3",
+      "elapsed_ms": 533
+    },
+    {
+      "page": "Overview cold navigation/reload 4",
+      "elapsed_ms": 550
+    },
+    {
+      "page": "Overview cold navigation/reload 5",
+      "elapsed_ms": 538
+    },
+    {
+      "page": "Subscriptions",
+      "samples": 5,
+      "p95_ms": 215,
+      "max_ms": 215
+    },
+    {
+      "page": "Invoices",
+      "samples": 5,
+      "p95_ms": 247,
+      "max_ms": 247
+    },
+    {
+      "page": "Payments",
+      "samples": 5,
+      "p95_ms": 214,
+      "max_ms": 214
+    },
+    {
+      "page": "Customers",
+      "samples": 5,
+      "p95_ms": 230,
+      "max_ms": 230
+    },
+    {
+      "page": "Products & plans",
+      "samples": 5,
+      "p95_ms": 98,
+      "max_ms": 98
+    },
+    {
+      "page": "Quotations",
+      "samples": 5,
+      "p95_ms": 215,
+      "max_ms": 215
+    },
+    {
+      "page": "Taxes & discounts",
+      "samples": 5,
+      "p95_ms": 98,
+      "max_ms": 98
+    },
+    {
+      "page": "Reports",
+      "samples": 5,
+      "p95_ms": 411,
+      "max_ms": 411
+    },
+    {
+      "page": "Audit log",
+      "samples": 5,
+      "p95_ms": 231,
+      "max_ms": 231
+    },
+    {
+      "page": "Settings",
+      "samples": 5,
+      "p95_ms": 111,
+      "max_ms": 111
+    }
+  ],
+  "billing": {
+    "due_subscriptions": 500,
+    "overlapping_runs": 2,
+    "created": 500,
+    "failed": 0,
+    "elapsed_ms": 739
+  },
+  "errors": []
+}

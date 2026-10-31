@@ -1,0 +1,55 @@
+{
+  "rubric": "original independent rubric, unchanged weights",
+  "score_history": [
+    76,
+    84,
+    89,
+    93
+  ],
+  "final_score": 93,
+  "external_jury_certification": false,
+  "sqlite_tests": {
+    "passed": 39,
+    "failed": 0
+  },
+  "postgres_tests": {
+    "passed": 38,
+    "failed": 0
+  },
+  "demo_browser_checks": 10,
+  "api_browser_checks": 10,
+  "coverage": {
+    "line_percent": 89.04,
+    "branch_percent": 78.17,
+    "function_percent": 83.24,
+    "scope": "loaded non-test backend modules"
+  },
+  "audit_known_findings": 0,
+  "performance_dataset": {
+    "subscriptions": 10000,
+    "invoices": 60000,
+    "payments": 30000
+  },
+  "api_max_p95_ms": 413,
+  "workspace_transition_max_p95_ms": 411,
+  "overview_max_ms": 1057,
+  "billing": {
+    "due_subscriptions": 500,
+    "overlapping_runs": 2,
+    "created": 500,
+    "failed": 0,
+    "elapsed_ms": 739
+  },
+  "original_css_unchanged": true,
+  "visual_geometry_checked_widths": [
+    1440,
+    390
+  ],
+  "live_same_origin_login_verified": true,
+  "limits": [
+    "Local measured performance, not universal WAN SLA",
+    "SMTP tested on controlled receiver, user provider credentials required",
+    "No hosted Actions execution or Docker engine build claimed",
+    "localStorage tokens and large legacy modules remain"
+  ]
+}

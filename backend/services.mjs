@@ -96,7 +96,13 @@ export async function calculate(trx, lines, date = today()) {
     applied.push({ id: d.id, name: d.name, amount });
   }
   return {
-    lines: JSON.stringify(out.map(({ remaining, ...l }) => l)),
+    lines: JSON.stringify(
+      out.map((line) => {
+        const copy = { ...line };
+        delete copy.remaining;
+        return copy;
+      }),
+    ),
     subtotal: round(subtotal),
     tax_total: round(tax_total),
     discount_total: round(discount_total),
@@ -154,7 +160,11 @@ export async function runBilling(actor = "system") {
   const date = today();
   while (true) {
     const batch = await db("subscriptions")
-      .where(function () { this.whereIn("status", ["Active", "Paused"]).orWhere(function () { this.where("status", "Closed").whereNotNull("bill_until"); }); })
+      .where(function () {
+        this.whereIn("status", ["Active", "Paused"]).orWhere(function () {
+          this.where("status", "Closed").whereNotNull("bill_until");
+        });
+      })
       .where("next_billing_date", "<=", date)
       .where("id", ">", cursor)
       .orderBy("id")
@@ -175,26 +185,53 @@ export async function runBilling(actor = "system") {
               await trx("plans").where({ id: s.plan_id }).first(),
             );
             if (s.next_billing_date > date) return "done";
-            if (s.status === "Closed" && (!s.bill_until || s.next_billing_date >= s.bill_until)) return "done";
-            if (s.status === "Paused" && s.next_billing_date >= (s.paused_at || date)) return "done";
+            if (
+              s.status === "Closed" &&
+              (!s.bill_until || s.next_billing_date >= s.bill_until)
+            )
+              return "done";
+            if (
+              s.status === "Paused" &&
+              s.next_billing_date >= (s.paused_at || date)
+            )
+              return "done";
             if (
               s.next_billing_date >= s.expiry_date &&
               plan.flags.auto_close_on_end
             ) {
               await trx("subscriptions")
                 .where({ id: s.id })
-                .update({ status: "Closed" });
+                .update({ status: "Closed", revision: s.revision + 1 });
               await audit(trx, "subscription", s.id, actor, "auto_closed", s, {
                 status: "Closed",
               });
               return "done";
             }
             const start = s.next_billing_date;
-            const end = addPeriod(start, plan.billing_frequency, 1, s.start_date);
+            const end = addPeriod(
+              start,
+              plan.billing_frequency,
+              1,
+              s.start_date,
+            );
             // Full anchored periods starting during a completed pause are not charged.
-            if ((s.pause_intervals || []).some(p => start >= p.start && start < p.end)) {
-              await trx("subscriptions").where({id:s.id}).update({next_billing_date:end});
-              await audit(trx, "subscription", s.id, actor, "paused_period_skipped", null, {period_start:start,period_end:end});
+            if (
+              (s.pause_intervals || []).some(
+                (p) => start >= p.start && start < p.end,
+              )
+            ) {
+              await trx("subscriptions")
+                .where({ id: s.id })
+                .update({ next_billing_date: end, revision: s.revision + 1 });
+              await audit(
+                trx,
+                "subscription",
+                s.id,
+                actor,
+                "paused_period_skipped",
+                null,
+                { period_start: start, period_end: end },
+              );
               return "skipped";
             }
             const exists = await trx("invoices")
@@ -203,7 +240,7 @@ export async function runBilling(actor = "system") {
             if (exists) {
               await trx("subscriptions")
                 .where({ id: s.id })
-                .update({ next_billing_date: end });
+                .update({ next_billing_date: end, revision: s.revision + 1 });
               return "skipped";
             }
             const customer = await trx("users")
@@ -225,15 +262,27 @@ export async function runBilling(actor = "system") {
               due_date: addPeriod(start, "daily", s.payment_terms),
               status: "Draft",
               paid_amount: 0,
-              ...(await calculate(trx, s.pending_lines && start >= s.pending_effective_date ? s.pending_lines : s.lines, start)),
+              ...(await calculate(
+                trx,
+                s.pending_lines && start >= s.pending_effective_date
+                  ? s.pending_lines
+                  : s.lines,
+                start,
+              )),
             };
             if (s.pending_lines && start >= s.pending_effective_date) {
-              await trx("subscriptions").where({id:s.id}).update({lines:JSON.stringify(s.pending_lines),pending_lines:null,pending_effective_date:null});
+              await trx("subscriptions")
+                .where({ id: s.id })
+                .update({
+                  lines: JSON.stringify(s.pending_lines),
+                  pending_lines: null,
+                  pending_effective_date: null,
+                });
             }
             await trx("invoices").insert(invoice);
             await trx("subscriptions")
               .where({ id: s.id })
-              .update({ next_billing_date: end });
+              .update({ next_billing_date: end, revision: s.revision + 1 });
             await audit(
               trx,
               "invoice",
@@ -275,14 +324,31 @@ export async function runBilling(actor = "system") {
   ).map(decode);
   for (const s of closing) {
     const p = decode(await db("plans").where({ id: s.plan_id }).first());
-    if (p.flags.auto_close_on_end)
+    if (
+      p.flags.auto_close_on_end &&
+      !errors.some((e) => e.subscription_id === s.id)
+    )
       await db.transaction(async (trx) => {
-        await trx("subscriptions")
-          .where({ id: s.id })
-          .update({ status: "Closed" });
-        await audit(trx, "subscription", s.id, actor, "auto_closed", s, {
-          status: "Closed",
-        });
+        const changed = await trx("subscriptions")
+          .where({ id: s.id, status: s.status, revision: s.revision })
+          .update({
+            status: "Closed",
+            revision: s.revision + 1,
+            bill_until: s.expiry_date,
+            ...(s.status === "Paused"
+              ? {
+                  paused_at: null,
+                  pause_intervals: JSON.stringify([
+                    ...(s.pause_intervals || []),
+                    { start: s.paused_at || s.expiry_date, end: s.expiry_date },
+                  ]),
+                }
+              : {}),
+          });
+        if (changed)
+          await audit(trx, "subscription", s.id, actor, "auto_closed", s, {
+            status: "Closed",
+          });
       });
   }
   run.finished_at = now();
@@ -312,12 +378,15 @@ export async function confirmInvoice(invoiceId, actor) {
         .where({ id: d.id })
         .modify((q) => {
           if (!rule) q.whereRaw("1 = 0");
-          else if (rule.max_uses != null) q.where("used_count", "<", rule.max_uses);
+          else if (rule.max_uses != null)
+            q.where("used_count", "<", rule.max_uses);
         })
         .increment("used_count", 1);
       if (!changed)
         throw Object.assign(
-          new Error("Discount allowance exhausted; cancel and regenerate an explicit revised draft"),
+          new Error(
+            "Discount allowance exhausted; cancel and regenerate an explicit revised draft",
+          ),
           { status: 409 },
         );
       await audit(

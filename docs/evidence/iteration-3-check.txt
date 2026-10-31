@@ -1,0 +1,85 @@
+
+> brightloop-subscription-workspace@0.0.0 check
+> npm run lint && npm run build && npm test
+
+
+> brightloop-subscription-workspace@0.0.0 lint
+> eslint .
+
+
+> brightloop-subscription-workspace@0.0.0 build
+> tsc -b && vite build
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 2397 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                              0.90 kB │ gzip:   0.48 kB
+dist/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+dist/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+dist/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.75 kB
+dist/assets/inter-greek-wght-normal-CkhJZR-_.woff2          19.00 kB
+dist/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+dist/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.26 kB
+dist/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.07 kB
+dist/assets/index-Nnol4rpa.css                              64.58 kB │ gzip:  14.90 kB
+dist/assets/react-vendor-Bv07Qh6I.js                         3.97 kB │ gzip:   1.44 kB
+dist/assets/purify.es-18JuyMri.js                           30.12 kB │ gzip:  11.51 kB
+dist/assets/motion-BVh588zV.js                             134.24 kB │ gzip:  44.51 kB
+dist/assets/index.es-CtJ4Lk1m.js                           159.01 kB │ gzip:  53.09 kB
+dist/assets/html2canvas.esm-DXEQVQnt.js                    201.04 kB │ gzip:  47.43 kB
+dist/assets/index-DZ0qvRz1.js                              317.53 kB │ gzip:  96.02 kB
+dist/assets/jspdf.es.min-BLAexCV4.js                       386.28 kB │ gzip: 126.44 kB
+✓ built in 4.79s
+
+> brightloop-subscription-workspace@0.0.0 test
+> node --test backend/tests/*.test.mjs
+
+✔ regression: old active subscriptions and catalog records remain visible (60.056976ms)
+✔ regression: quotation price remains frozen across catalog edits (31.543758ms)
+✔ regression: confirmation preserves historical tax and discount snapshot (13.980035ms)
+✔ regression: pause/resume retains accrued unbilled periods (24.130766ms)
+✔ paused intervals skip only periods starting inside the pause and retain anchor (14.901031ms)
+✔ closing preserves previously accrued charges (26.467413ms)
+✔ regression: draft debt excluded and old confirmed debt reconciles with aging (15.161904ms)
+✔ regression: sub-cent payments rejected before creating zero-value entries (6.196401ms)
+✔ regression: full Draft to Quotation to Confirmed to Active sequence (12.517495ms)
+✔ billing anchors recover month-end and leap-year anniversaries (1.697022ms)
+✔ regression: historical revenue is independent of materialized summaries (5.022584ms)
+✔ versioned migration is repeatable and retains existing records (4.826977ms)
+✔ parallel confirmation never overspends final discount capacity (3.83664ms)
+✔ amendments preserve agreed prices, apply prospectively, and reject stale revisions (17.145828ms)
+✔ portal amendments enforce ownership, prevent contract overrides and keep cost private (18.464188ms)
+✔ global server search finds old records outside cached pages and scopes customers (5.955153ms)
+✔ session version revokes previously issued access tokens immediately (6.151914ms)
+✔ SMTP sends clickable resets and PDF attachments; failed delivery retries with one worker claim (359.816789ms)
+✔ payment retry keys prevent duplicate partial payments and reject changed payloads (13.463658ms)
+✔ add-on line is scheduled and can be removed without rewriting issued service (7.47053ms)
+✔ 500 due subscriptions survive two overlapping billing workers without duplicate periods (933.962269ms)
+✔ failed pricing rolls back cursor/invoice and does not auto-close away unbilled debt (10.276392ms)
+✔ minimum seat quantity applies to the plan product, not an independent add-on (96.861545ms)
+✔ M1: server rejects weak password; unique emails are case-insensitive (615.550009ms)
+✔ M1: unauthenticated calls are 401; customer and staff cannot add staff (272.263855ms)
+✔ M1: refresh tokens rotate and cannot be replayed (270.149417ms)
+✔ M2/M3: admin catalog CRUD, variant delta, plan availability, staff mutation 403 (40.797974ms)
+✔ M4: quote conversion is atomic, single-use, and rejects expired quotes (19.104633ms)
+✔ M5: illegal transitions return 409; pause and resume follow state machine (18.866153ms)
+✔ M7: expired and exhausted discounts are skipped; line tax precedes discount (12.144793ms)
+✔ M6: billing twice never duplicates an invoice; billing run scan is logged (10.838965ms)
+✔ M6/M7: confirmation consumes a capped discount exactly once (7.364087ms)
+✔ M8: partial payment stays Confirmed; exact balance transitions to Paid (8.887905ms)
+✔ M8: cancelled invoices, future payments, and overpayment are rejected (6.913654ms)
+✔ M9: server-side customer isolation covers lists, records, PDF and mutations (12.364658ms)
+✔ M6/M11: PDF is generated locally; notifications are idempotent (33.77929ms)
+✔ M10/M11: paginated date-bound reports, summaries and mutation audits (17.866156ms)
+✔ M1: reset tokens are expiring, single-use and password policy is enforced (534.388984ms)
+✔ genuine original schema upgrades without deleting old business data (104.23225ms)
+ℹ tests 39
+ℹ suites 0
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4576.518372

@@ -3,14 +3,13 @@ import assert from "node:assert/strict";
 import supertest from "supertest";
 import bcrypt from "bcryptjs";
 process.env.SQLITE_PATH = ":memory:";
-process.env.DATABASE_URL = "";
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || "";
 process.env.JWT_SECRET =
   "test-only-brightloop-secret-at-least-thirty-two-chars";
 process.env.NODE_ENV = "test";
 process.env.QUIET = "1";
 const { app } = await import("../app.mjs");
-const { db, migrate, id, now, today, addPeriod, decode } =
-  await import("../db.mjs");
+const { db, migrate, id, now, today, addPeriod } = await import("../db.mjs");
 const { calculate, reminders } = await import("../services.mjs");
 const api = supertest(app);
 let adminToken,
@@ -73,13 +72,11 @@ after(async () => {
   await db.destroy();
 });
 test("M1: server rejects weak password; unique emails are case-insensitive", async () => {
-  const r = await api
-    .post("/api/auth/signup")
-    .send({
-      name: "Weak User",
-      email: "weak@test.local",
-      password: "weakpass",
-    });
+  const r = await api.post("/api/auth/signup").send({
+    name: "Weak User",
+    email: "weak@test.local",
+    password: "weakpass",
+  });
   assert.equal(r.status, 400);
   const duplicate = await api
     .post("/api/auth/signup")

@@ -1,0 +1,29 @@
+
+> brightloop-subscription-workspace@0.0.0 format
+> prettier --write "backend/**/*.mjs" "frontend/src/**/*.{ts,tsx}" "scripts/*.mjs"
+
+backend/app.mjs 196ms
+backend/auth.mjs 28ms
+backend/db.mjs 23ms
+backend/mailer.mjs 15ms
+backend/migrations.mjs 8ms
+backend/seed.mjs 14ms (unchanged)
+backend/server.mjs 4ms
+backend/services.mjs 40ms
+backend/tests/hardening.test.mjs 26ms
+backend/tests/system.test.mjs 17ms
+frontend/src/BrightloopApp.tsx 435ms
+frontend/src/components/CatalogManager.tsx 67ms
+frontend/src/components/Charts.tsx 45ms (unchanged)
+frontend/src/components/ServerPicker.tsx 7ms
+frontend/src/components/ServerRecords.tsx 47ms
+frontend/src/components/SubscriptionEditor.tsx 10ms
+frontend/src/data.ts 30ms
+scripts/acceptance_test.mjs 21ms
+scripts/backup.mjs 3ms
+scripts/dev.mjs 3ms (unchanged)
+scripts/load_seed.mjs 6ms (unchanged)
+scripts/local_ui_test.mjs 18ms
+scripts/postgres_test.mjs 2ms
+scripts/run_local_ui.mjs 1ms
+scripts/ui_test.mjs 10ms

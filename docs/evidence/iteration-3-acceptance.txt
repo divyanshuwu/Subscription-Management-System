@@ -1,0 +1,106 @@
+
+> brightloop-subscription-workspace@0.0.0 test:acceptance
+> node scripts/acceptance_test.mjs
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 2402 modules transformed.
+rendering chunks...
+computing gzip size...
+artifacts/acceptance-web/index.html                                              0.90 kB │ gzip:   0.47 kB
+artifacts/acceptance-web/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+artifacts/acceptance-web/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+artifacts/acceptance-web/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.75 kB
+artifacts/acceptance-web/assets/inter-greek-wght-normal-CkhJZR-_.woff2          19.00 kB
+artifacts/acceptance-web/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+artifacts/acceptance-web/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.26 kB
+artifacts/acceptance-web/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.07 kB
+artifacts/acceptance-web/assets/index-Nnol4rpa.css                              64.58 kB │ gzip:  14.90 kB
+artifacts/acceptance-web/assets/react-vendor-EM_hUAnn.js                         9.66 kB │ gzip:   2.99 kB
+artifacts/acceptance-web/assets/purify.es-18JuyMri.js                           30.12 kB │ gzip:  11.51 kB
+artifacts/acceptance-web/assets/motion-DZaF5fgq.js                             155.22 kB │ gzip:  51.38 kB
+artifacts/acceptance-web/assets/index.es-CnJaGl_z.js                           159.01 kB │ gzip:  53.09 kB
+artifacts/acceptance-web/assets/html2canvas.esm-DXEQVQnt.js                    201.04 kB │ gzip:  47.43 kB
+artifacts/acceptance-web/assets/jspdf.es.min-BvsyXVqF.js                       386.28 kB │ gzip: 126.44 kB
+artifacts/acceptance-web/assets/index-Bl4_z3nZ.js                              654.82 kB │ gzip: 161.00 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 6.63s
+Seeded 12 customers, 24 subscriptions, and 31 invoices.
+
+DEMO CREDENTIALS (change before production)
+ADMIN    admin@brightloop.local
+STAFF    staff@brightloop.local
+CUSTOMER customer@brightloop.local
+Password Brightloop@2026
+
+Seeding realistic ledger: 10,000 subscriptions, 60,000+ invoices, 30,000+ payments
+API {
+  endpoint: '/subscriptions',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 17,
+  max_ms: 22
+}
+API {
+  endpoint: '/invoices',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 17,
+  max_ms: 18
+}
+API {
+  endpoint: '/invoices/outstanding',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 111,
+  max_ms: 111
+}
+API {
+  endpoint: '/payments',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 41,
+  max_ms: 41
+}
+API {
+  endpoint: '/dashboard/summary',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 134,
+  max_ms: 134
+}
+API {
+  endpoint: '/reports/aging',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 71,
+  max_ms: 71
+}
+API {
+  endpoint: '/analytics/revenue',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 413,
+  max_ms: 414
+}
+API {
+  endpoint: '/search?search=ACCEPT',
+  requests: 50,
+  concurrency: 5,
+  p95_ms: 68,
+  max_ms: 68
+}
+PAGE { page: 'Subscriptions', samples: 5, p95_ms: 215, max_ms: 215 }
+PAGE { page: 'Invoices', samples: 5, p95_ms: 247, max_ms: 247 }
+PAGE { page: 'Payments', samples: 5, p95_ms: 214, max_ms: 214 }
+PAGE { page: 'Customers', samples: 5, p95_ms: 230, max_ms: 230 }
+PAGE { page: 'Products & plans', samples: 5, p95_ms: 98, max_ms: 98 }
+PAGE { page: 'Quotations', samples: 5, p95_ms: 215, max_ms: 215 }
+PAGE { page: 'Taxes & discounts', samples: 5, p95_ms: 98, max_ms: 98 }
+PAGE { page: 'Reports', samples: 5, p95_ms: 411, max_ms: 411 }
+PAGE { page: 'Audit log', samples: 5, p95_ms: 231, max_ms: 231 }
+PAGE { page: 'Settings', samples: 5, p95_ms: 111, max_ms: 111 }

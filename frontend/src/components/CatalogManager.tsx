@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Check, LoaderCircle, Plus, Settings2, Trash2, X } from "lucide-react";
 import { API_URL, request, uid, type Data, type Plan } from "../data";
 import "./ServerRecords.css";
+// Dynamic form field registry spans six catalog schemas; each submitted payload is server-validated.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type RecordValue = Record<string, any>;
 const titles: Record<string, string> = {
   products: "Products",
@@ -78,27 +80,33 @@ export function CatalogManager({
   }
   useEffect(() => {
     if (!open) return;
-    setError("");
-    if (kind === "templates") {
-      if (API_URL)
-        void request("/templates?page_size=100")
-          .then((r) => setExtras(r.data))
-          .catch((e) => setError(e.message));
-      else {
-        const stored = localStorage.getItem("brightloop-templates");
-        setExtras(stored ? JSON.parse(stored) : []);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setError("");
+      try {
+        if (kind === "templates") {
+          const rows = API_URL
+            ? (await request("/templates?page_size=100")).data
+            : JSON.parse(localStorage.getItem("brightloop-templates") || "[]");
+          if (!cancelled) setExtras(rows);
+        } else if (kind === "variants") {
+          const rows =
+            API_URL && productId
+              ? (await request(`/products/${productId}/variants`)).data
+              : data.products.find((p) => p.id === productId)?.variants || [];
+          if (!cancelled) setExtras(rows);
+        }
+      } catch (e) {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Unable to load catalog");
       }
-    } else if (kind === "variants") {
-      if (API_URL && productId)
-        void request(`/products/${productId}/variants`)
-          .then((r) => setExtras(r.data))
-          .catch((e) => setError(e.message));
-      else
-        setExtras(
-          data.products.find((p) => p.id === productId)?.variants || [],
-        );
-    }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [open, kind, productId, data.products]);
+
   const records: RecordValue[] = ["variants", "templates"].includes(kind)
     ? extras
     : ((data[kind as keyof Data] || []) as RecordValue[]);

@@ -1,0 +1,37 @@
+
+> brightloop-subscription-workspace@0.0.0 test:ui
+> node scripts/run_demo_ui.mjs
+
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 2397 modules transformed.
+rendering chunks...
+computing gzip size...
+artifacts/demo-web/index.html                                              0.90 kB │ gzip:   0.47 kB
+artifacts/demo-web/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+artifacts/demo-web/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+artifacts/demo-web/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.75 kB
+artifacts/demo-web/assets/inter-greek-wght-normal-CkhJZR-_.woff2          19.00 kB
+artifacts/demo-web/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+artifacts/demo-web/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.26 kB
+artifacts/demo-web/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.07 kB
+artifacts/demo-web/assets/index-Nnol4rpa.css                              64.58 kB │ gzip:  14.90 kB
+artifacts/demo-web/assets/react-vendor-Bv07Qh6I.js                         3.97 kB │ gzip:   1.44 kB
+artifacts/demo-web/assets/purify.es-18JuyMri.js                           30.12 kB │ gzip:  11.51 kB
+artifacts/demo-web/assets/motion-BVh588zV.js                             134.24 kB │ gzip:  44.51 kB
+artifacts/demo-web/assets/index.es-D0fGwzDm.js                           159.01 kB │ gzip:  53.09 kB
+artifacts/demo-web/assets/html2canvas.esm-DXEQVQnt.js                    201.04 kB │ gzip:  47.43 kB
+artifacts/demo-web/assets/index-CpM8FSWl.js                              325.63 kB │ gzip:  98.18 kB
+artifacts/demo-web/assets/jspdf.es.min-DjE1mrhC.js                       386.28 kB │ gzip: 126.44 kB
+✓ built in 4.49s
+PASS Desktop dashboard renders and fits viewport
+PASS Create subscription with customer, plan and terms
+PASS Confirm, activate, pause and resume subscription
+PASS Billing creates invoices and repeat runs skip duplicate periods
+PASS Invoice PDF downloads locally
+PASS Global search opens and finds subscriptions
+PASS Every workspace navigation page renders
+PASS Customer preview hides staff navigation and scopes rows
+MOBILE OVERFLOW { width: 390, scroll: 390, nodes: [] }
+PASS Mobile navigation, layout and dashboard fit 390px
+PASS No browser runtime errors

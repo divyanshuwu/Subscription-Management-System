@@ -3,13 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
-export default defineConfig(async ({ mode }) => {
+export default defineConfig(({ mode }) => {
   const plugins = [react(), tailwindcss()];
-  try {
-    // @ts-ignore
-    const m = await import("./.vite-source-tags.js");
-    plugins.push(m.sourceTags());
-  } catch {}
 
   const env = loadEnv(mode, process.cwd(), ["VITE_", "NEXT_PUBLIC_"]);
   const processEnvDefines: Record<string, string> = {};
@@ -19,6 +14,12 @@ export default defineConfig(async ({ mode }) => {
 
   return {
     plugins,
+    server: {
+      host: "0.0.0.0",
+      allowedHosts: [".e2b.app", "localhost"],
+      proxy: {"/api": {target: process.env.API_PROXY_TARGET || "http://127.0.0.1:4000",changeOrigin:true}},
+    },
+    preview: {host:"0.0.0.0",allowedHosts:[".e2b.app","localhost"]},
     build: {
       rollupOptions: {
         output: {

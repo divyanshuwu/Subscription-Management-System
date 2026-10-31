@@ -1,0 +1,5 @@
+
+> brightloop-subscription-workspace@0.0.0 test:visual
+> node scripts/visual_test.mjs
+
+PASS: original CSS hashes and 8 dashboard regions match at 1440px and 390px; no horizontal overflow. Functional text/content may differ.

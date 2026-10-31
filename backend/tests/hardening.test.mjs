@@ -1,52 +1,708 @@
-import {test,before,after,beforeEach} from 'node:test';
-import assert from 'node:assert/strict';
-import supertest from 'supertest';
-import jwt from 'jsonwebtoken';
-process.env.SQLITE_PATH=':memory:';process.env.DATABASE_URL='';process.env.JWT_SECRET='hardening-test-only-secret-more-than-thirty-two';process.env.NODE_ENV='test';process.env.QUIET='1';
-const {app}=await import('../app.mjs');
-const {db,migrate,id,now,today,addPeriod}=await import('../db.mjs');
-const {runBilling,confirmInvoice,refreshSummary,reminders}=await import('../services.mjs');
-const api=supertest(app);let admin,customer,product,plan,token;
-const call=(method,url,body)=>api[method]('/api'+url).set('Authorization','Bearer '+token).send(body);
-async function sub(overrides={}){const r={id:id(),number:'TEST-'+id(),customer_id:customer,plan_id:plan,status:'Active',start_date:today(),expiry_date:addPeriod(today(),'yearly'),next_billing_date:today(),payment_terms:14,lines:JSON.stringify([{product_id:product,name:'Product',quantity:1,unit_price:100,variant_ids:[]}]),created_at:now(),...overrides};await db('subscriptions').insert(r);return r;}
-async function invoice(s,overrides={}){const r={id:id(),number:'INV-'+id(),subscription_id:s.id,customer_id:customer,period_start:today(),period_end:addPeriod(today(),'monthly'),due_date:today(),status:'Confirmed',lines:s.lines,subtotal:100,tax_total:0,discount_total:0,total:100,paid_amount:0,applied_discounts:'[]',created_at:now(),...overrides};await db('invoices').insert(r);return r;}
-before(async()=>{await migrate();});
-beforeEach(async()=>{
- for(const t of ['payments','invoices','quotations','templates','subscriptions','variants','plans','products','discounts','taxes','daily_summary','notifications','audit','billing_runs','refresh_tokens','password_resets','users'])await db(t).delete();
- admin=id();customer=id();product=id();plan=id();
- await db('users').insert([{id:admin,name:'Admin',email:'admin@test.local',password_hash:'unused',role:'ADMIN',created_at:now()},{id:customer,name:'Customer',email:'customer@test.local',password_hash:'unused',role:'CUSTOMER',created_at:now()}]);
- await db('products').insert({id:product,name:'Product',sales_price:100,created_at:now(),active:true});
- await db('plans').insert({id:plan,name:'Plan',product_id:product,price:100,billing_frequency:'monthly',flags:JSON.stringify({auto_close_on_end:true,allow_pause:true,allow_renew:true,allow_early_close:true}),created_at:now(),active:true,min_quantity:1});
- token=jwt.sign({role:'ADMIN'},process.env.JWT_SECRET,{subject:admin,issuer:'brightloop',audience:'brightloop-local',expiresIn:'15m'});
+import { test, before, after, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+import supertest from "supertest";
+import jwt from "jsonwebtoken";
+process.env.SQLITE_PATH = ":memory:";
+process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || "";
+process.env.JWT_SECRET = "hardening-test-only-secret-more-than-thirty-two";
+process.env.NODE_ENV = "test";
+process.env.QUIET = "1";
+const { app } = await import("../app.mjs");
+const { db, migrate, id, now, today, addPeriod } = await import("../db.mjs");
+const { runBilling, confirmInvoice, refreshSummary, reminders } =
+  await import("../services.mjs");
+const api = supertest(app);
+let admin, customer, product, plan, token;
+const call = (method, url, body) =>
+  api[method]("/api" + url)
+    .set("Authorization", "Bearer " + token)
+    .send(body);
+async function sub(overrides = {}) {
+  const r = {
+    id: id(),
+    number: "TEST-" + id(),
+    customer_id: customer,
+    plan_id: plan,
+    status: "Active",
+    start_date: today(),
+    expiry_date: addPeriod(today(), "yearly"),
+    next_billing_date: today(),
+    payment_terms: 14,
+    lines: JSON.stringify([
+      {
+        product_id: product,
+        name: "Product",
+        quantity: 1,
+        unit_price: 100,
+        variant_ids: [],
+      },
+    ]),
+    created_at: now(),
+    ...overrides,
+  };
+  await db("subscriptions").insert(r);
+  return r;
+}
+async function invoice(s, overrides = {}) {
+  const r = {
+    id: id(),
+    number: "INV-" + id(),
+    subscription_id: s.id,
+    customer_id: customer,
+    period_start: today(),
+    period_end: addPeriod(today(), "monthly"),
+    due_date: today(),
+    status: "Confirmed",
+    lines: s.lines,
+    subtotal: 100,
+    tax_total: 0,
+    discount_total: 0,
+    total: 100,
+    paid_amount: 0,
+    applied_discounts: "[]",
+    created_at: now(),
+    ...overrides,
+  };
+  await db("invoices").insert(r);
+  return r;
+}
+before(async () => {
+  await migrate();
 });
-after(async()=>{await db.destroy();});
-test('regression: old active subscriptions and catalog records remain visible',async()=>{const old=addPeriod(today(),'yearly',-2)+'T00:00:00Z';await sub({created_at:old});await db('products').update({created_at:old});assert.equal((await call('get','/subscriptions')).body.total,1);assert.equal((await call('get','/products')).body.total,1);});
-test('regression: quotation price remains frozen across catalog edits',async()=>{const t=await call('post','/templates',{name:'Template',plan_id:plan,lines:[{product_id:product,quantity:1}]});const q=await call('post','/quotations',{template_id:t.body.id,customer_id:customer});await call('put','/plans/'+plan,{price:200});const c=await call('post','/quotations/'+q.body.id+'/convert');assert.equal(c.status,201);assert.equal(c.body.lines[0].unit_price,100);assert.equal((await call('post','/quotations/'+q.body.id+'/convert')).status,409);});
-test('regression: confirmation preserves historical tax and discount snapshot',async()=>{const start=addPeriod(today(),'monthly',-1);await db('taxes').insert({id:id(),name:'Tax',type:'percent',value:10,active:true,created_at:now()});await db('discounts').insert({id:id(),name:'Offer',type:'percent',value:10,min_amount:0,min_quantity:1,start_date:start,end_date:addPeriod(today(),'daily',-1),scope:'subscription',active:true,used_count:0,created_at:now()});const s=await sub({start_date:start,next_billing_date:start});await runBilling();const i=await db('invoices').where({subscription_id:s.id,period_start:start}).first();await db('taxes').update({value:20});const c=await confirmInvoice(i.id,admin);assert.equal(Number(i.total),100);assert.equal(c.total,100);assert.equal(c.tax_total,10);});
-test('regression: pause/resume retains accrued unbilled periods',async()=>{const due=addPeriod(today(),'monthly',-1),s=await sub({start_date:due,next_billing_date:due});await call('post',`/subscriptions/${s.id}/pause`);await call('post',`/subscriptions/${s.id}/resume`);await runBilling();assert.ok(await db('invoices').where({subscription_id:s.id,period_start:due}).first());});
-test('paused intervals skip only periods starting inside the pause and retain anchor',async()=>{const due=addPeriod(today(),'monthly',-2),resume=addPeriod(today(),'monthly',-1);const s=await sub({start_date:due,next_billing_date:due,pause_intervals:JSON.stringify([{start:due,end:resume}])});await runBilling();assert.equal(await db('invoices').where({subscription_id:s.id,period_start:due}).first(),undefined);assert.ok(await db('invoices').where({subscription_id:s.id,period_start:resume}).first());});
-test('closing preserves previously accrued charges',async()=>{const due=addPeriod(today(),'monthly',-1),s=await sub({start_date:due,next_billing_date:due});assert.equal((await call('post',`/subscriptions/${s.id}/close`)).status,200);await runBilling();assert.ok(await db('invoices').where({subscription_id:s.id,period_start:due}).first());});
-test('regression: draft debt excluded and old confirmed debt reconciles with aging',async()=>{const a=await sub(),b=await sub();await invoice(a,{status:'Draft',due_date:addPeriod(today(),'daily',-10)});await invoice(b,{due_date:addPeriod(today(),'yearly',-2)});await refreshSummary();const summary=(await call('get','/dashboard/summary')).body;const aging=(await call('get','/reports/aging')).body;assert.equal(summary.outstanding,100);assert.equal(summary.overdue_count,1);assert.equal(aging.data.reduce((n,r)=>n+r.amount,0),100);await reminders();assert.equal(Number((await db('notifications').count('* as n').first()).n),2);});
-test('regression: sub-cent payments rejected before creating zero-value entries',async()=>{const i=await invoice(await sub());assert.equal((await call('post','/payments',{invoice_id:i.id,method:'bank',amount:0.001})).status,400);assert.equal(Number((await db('payments').count('* as n').first()).n),0);});
-test('regression: full Draft to Quotation to Confirmed to Active sequence',async()=>{const s=await sub({status:'Draft'});for(const a of ['quotation','confirm','activate'])assert.equal((await call('post',`/subscriptions/${s.id}/${a}`)).status,200);});
-test('billing anchors recover month-end and leap-year anniversaries',()=>{assert.equal(addPeriod('2026-02-28','monthly',1,'2026-01-31'),'2026-03-31');assert.equal(addPeriod('2027-02-28','yearly',1,'2024-02-29'),'2028-02-29');});
-test('regression: historical revenue is independent of materialized summaries',async()=>{const s=await sub(),i=await invoice(s,{status:'Paid',paid_amount:100}),past=addPeriod(today(),'daily',-1);await db('payments').insert({id:id(),invoice_id:i.id,customer_id:customer,method:'bank',amount:100,payment_date:past,recorded_by:admin,created_at:now()});const r=(await call('get',`/reports/revenue?from=${past}&to=${past}`)).body;assert.equal(r.data[0].revenue,100);});
-test('versioned migration is repeatable and retains existing records',async()=>{const s=await sub();await migrate();assert.ok(await db('subscriptions').where({id:s.id}).first());assert.equal(Number((await db('schema_migrations').count('* as n').first()).n),2);});
-test('parallel confirmation never overspends final discount capacity',async()=>{const did=id();await db('discounts').insert({id:did,name:'Last offer',type:'fixed',value:10,max_uses:1,used_count:0,min_amount:0,min_quantity:1,scope:'subscription',active:true,created_at:now()});const a=await invoice(await sub(),{status:'Draft',total:90,discount_total:10,applied_discounts:JSON.stringify([{id:did,amount:10}])}),b=await invoice(await sub(),{status:'Draft',total:90,discount_total:10,applied_discounts:JSON.stringify([{id:did,amount:10}])});const rs=await Promise.allSettled([confirmInvoice(a.id,admin),confirmInvoice(b.id,admin)]);assert.equal(rs.filter(r=>r.status==='fulfilled').length,1);assert.equal((await db('discounts').where({id:did}).first()).used_count,1);});
-test('amendments preserve agreed prices, apply prospectively, and reject stale revisions',async()=>{const s=await sub();await db('plans').update({price:200});const result=await call('put',`/subscriptions/${s.id}`,{expected_revision:0,lines:[{product_id:product,quantity:3}],expiry_date:addPeriod(today(),'yearly',2),payment_terms:30});assert.equal(result.status,200);assert.equal(result.body.lines[0].quantity,1);assert.equal(result.body.pending_lines[0].quantity,3);assert.equal(result.body.pending_lines[0].unit_price,100);assert.ok(result.body.pending_effective_date>today());assert.equal((await call('put',`/subscriptions/${s.id}`,{expected_revision:0,lines:[{product_id:product,quantity:4}]})).status,409);await runBilling();assert.equal(JSON.parse((await db('invoices').where({subscription_id:s.id}).first()).lines)[0].quantity,1);await db('subscriptions').where({id:s.id}).update({pending_effective_date:today(),next_billing_date:today()});await db('invoices').delete();await runBilling();assert.equal(JSON.parse((await db('invoices').where({subscription_id:s.id}).first()).lines)[0].quantity,3);});
-test('portal amendments enforce ownership, prevent contract overrides and keep cost private',async()=>{const s=await sub(),other=id();await db('users').insert({id:other,name:'Other',email:'other@test.local',role:'CUSTOMER',password_hash:'unused',created_at:now()});const ct=jwt.sign({role:'CUSTOMER'},process.env.JWT_SECRET,{subject:customer,issuer:'brightloop',audience:'brightloop-local'});const ot=jwt.sign({role:'CUSTOMER'},process.env.JWT_SECRET,{subject:other,issuer:'brightloop',audience:'brightloop-local'});const payload={expected_revision:0,lines:[{product_id:product,quantity:2}]};assert.equal((await api.put(`/api/portal/subscriptions/${s.id}`).set('Authorization','Bearer '+ot).send(payload)).status,403);assert.equal((await api.put(`/api/portal/subscriptions/${s.id}`).set('Authorization','Bearer '+ct).send({...payload,payment_terms:0})).status,400);assert.equal((await api.put(`/api/portal/subscriptions/${s.id}`).set('Authorization','Bearer '+ct).send(payload)).status,200);const catalog=await api.get('/api/portal/catalog').set('Authorization','Bearer '+ct);assert.equal(catalog.body.data[0].cost_price,undefined);});
-test('global server search finds old records outside cached pages and scopes customers',async()=>{const s=await sub({number:'ANCIENT-UNIQUE',created_at:'2020-01-01T00:00:00Z'});const r=(await call('get','/search?search=ANCIENT')).body;assert.equal(r.subscriptions[0].id,s.id);assert.equal((await call('get','/search?search=A')).body.subscriptions.length,0);});
-test('session version revokes previously issued access tokens immediately',async()=>{assert.equal((await call('get','/auth/me')).status,200);assert.equal((await call('post','/auth/logout')).status,200);assert.equal((await call('get','/auth/me')).status,401);});
-test('SMTP sends clickable resets and PDF attachments; failed delivery retries with one worker claim',async()=>{
- const {SMTPServer}=await import('smtp-server');const {email,deliverOutbox}=await import('../mailer.mjs');const received=[];
- const smtp=new SMTPServer({authOptional:true,disabledCommands:['STARTTLS'],onData(stream,session,done){const chunks=[];stream.on('data',c=>chunks.push(c));stream.on('end',()=>{received.push(Buffer.concat(chunks).toString());done();});}});
- await new Promise(r=>smtp.listen(0,'127.0.0.1',r));
- const port=smtp.server.address().port;
- Object.assign(process.env,{MAIL_TRANSPORT:'smtp',SMTP_HOST:'127.0.0.1',SMTP_PORT:String(port),SMTP_REQUIRE_TLS:'false',PUBLIC_APP_URL:'https://billing.example.test'});
- try{
-  await call('post','/auth/forgot-password',{email:'customer@test.local'});
-  assert.equal(received.length,1);assert.match(received[0].replace(/=\r\n/g,''),/billing\.example\.test/);assert.match(received[0],/reset(?:=|=3D)/);
-  const s=await sub(),i=await invoice(s);assert.equal((await call('post',`/invoices/${i.id}/send`)).status,200);assert.equal(received.length,2);assert.match(received[1],/application\/pdf/);assert.match(received[1],new RegExp(i.number));
-  process.env.SMTP_PORT='1';await email('retry-test','customer@test.local','Retry message','Durable body');const row=await db('notifications').where({key:'retry-test'}).first();assert.equal(row.delivery_status,'failed');process.env.SMTP_PORT=String(port);await db('notifications').where({id:row.id}).update({next_attempt_at:'2000-01-01T00:00:00Z'});await Promise.all([deliverOutbox(),deliverOutbox()]);assert.equal(received.length,3);assert.equal((await db('notifications').where({id:row.id}).first()).delivery_status,'sent');assert.equal(await email('retry-test','customer@test.local','Duplicate','Not sent'),false);assert.equal(received.length,3);
- }finally{process.env.MAIL_TRANSPORT='local';delete process.env.SMTP_HOST;await new Promise(r=>smtp.close(r));}
+beforeEach(async () => {
+  for (const t of [
+    "payments",
+    "invoices",
+    "quotations",
+    "templates",
+    "subscriptions",
+    "variants",
+    "plans",
+    "products",
+    "discounts",
+    "taxes",
+    "daily_summary",
+    "notifications",
+    "audit",
+    "billing_runs",
+    "refresh_tokens",
+    "password_resets",
+    "users",
+  ])
+    await db(t).delete();
+  admin = id();
+  customer = id();
+  product = id();
+  plan = id();
+  await db("users").insert([
+    {
+      id: admin,
+      name: "Admin",
+      email: "admin@test.local",
+      password_hash: "unused",
+      role: "ADMIN",
+      created_at: now(),
+    },
+    {
+      id: customer,
+      name: "Customer",
+      email: "customer@test.local",
+      password_hash: "unused",
+      role: "CUSTOMER",
+      created_at: now(),
+    },
+  ]);
+  await db("products").insert({
+    id: product,
+    name: "Product",
+    sales_price: 100,
+    created_at: now(),
+    active: true,
+  });
+  await db("plans").insert({
+    id: plan,
+    name: "Plan",
+    product_id: product,
+    price: 100,
+    billing_frequency: "monthly",
+    flags: JSON.stringify({
+      auto_close_on_end: true,
+      allow_pause: true,
+      allow_renew: true,
+      allow_early_close: true,
+    }),
+    created_at: now(),
+    active: true,
+    min_quantity: 1,
+  });
+  token = jwt.sign({ role: "ADMIN" }, process.env.JWT_SECRET, {
+    subject: admin,
+    issuer: "brightloop",
+    audience: "brightloop-local",
+    expiresIn: "15m",
+  });
+});
+after(async () => {
+  await db.destroy();
+});
+test("regression: old active subscriptions and catalog records remain visible", async () => {
+  const old = addPeriod(today(), "yearly", -2) + "T00:00:00Z";
+  await sub({ created_at: old });
+  await db("products").update({ created_at: old });
+  assert.equal((await call("get", "/subscriptions")).body.total, 1);
+  assert.equal((await call("get", "/products")).body.total, 1);
+});
+test("regression: quotation price remains frozen across catalog edits", async () => {
+  const t = await call("post", "/templates", {
+    name: "Template",
+    plan_id: plan,
+    lines: [{ product_id: product, quantity: 1 }],
+  });
+  const q = await call("post", "/quotations", {
+    template_id: t.body.id,
+    customer_id: customer,
+  });
+  await call("put", "/plans/" + plan, { price: 200 });
+  const c = await call("post", "/quotations/" + q.body.id + "/convert");
+  assert.equal(c.status, 201);
+  assert.equal(c.body.lines[0].unit_price, 100);
+  assert.equal(
+    (await call("post", "/quotations/" + q.body.id + "/convert")).status,
+    409,
+  );
+});
+test("regression: confirmation preserves historical tax and discount snapshot", async () => {
+  const start = addPeriod(today(), "monthly", -1);
+  await db("taxes").insert({
+    id: id(),
+    name: "Tax",
+    type: "percent",
+    value: 10,
+    active: true,
+    created_at: now(),
+  });
+  await db("discounts").insert({
+    id: id(),
+    name: "Offer",
+    type: "percent",
+    value: 10,
+    min_amount: 0,
+    min_quantity: 1,
+    start_date: start,
+    end_date: addPeriod(today(), "daily", -1),
+    scope: "subscription",
+    active: true,
+    used_count: 0,
+    created_at: now(),
+  });
+  const s = await sub({ start_date: start, next_billing_date: start });
+  await runBilling();
+  const i = await db("invoices")
+    .where({ subscription_id: s.id, period_start: start })
+    .first();
+  await db("taxes").update({ value: 20 });
+  const c = await confirmInvoice(i.id, admin);
+  assert.equal(Number(i.total), 100);
+  assert.equal(c.total, 100);
+  assert.equal(c.tax_total, 10);
+});
+test("regression: pause/resume retains accrued unbilled periods", async () => {
+  const due = addPeriod(today(), "monthly", -1),
+    s = await sub({ start_date: due, next_billing_date: due });
+  await call("post", `/subscriptions/${s.id}/pause`);
+  await call("post", `/subscriptions/${s.id}/resume`);
+  await runBilling();
+  assert.ok(
+    await db("invoices")
+      .where({ subscription_id: s.id, period_start: due })
+      .first(),
+  );
+});
+test("paused intervals skip only periods starting inside the pause and retain anchor", async () => {
+  const due = addPeriod(today(), "monthly", -2),
+    resume = addPeriod(today(), "monthly", -1);
+  const s = await sub({
+    start_date: due,
+    next_billing_date: due,
+    pause_intervals: JSON.stringify([{ start: due, end: resume }]),
+  });
+  await runBilling();
+  assert.equal(
+    await db("invoices")
+      .where({ subscription_id: s.id, period_start: due })
+      .first(),
+    undefined,
+  );
+  assert.ok(
+    await db("invoices")
+      .where({ subscription_id: s.id, period_start: resume })
+      .first(),
+  );
+});
+test("closing preserves previously accrued charges", async () => {
+  const due = addPeriod(today(), "monthly", -1),
+    s = await sub({ start_date: due, next_billing_date: due });
+  assert.equal(
+    (await call("post", `/subscriptions/${s.id}/close`)).status,
+    200,
+  );
+  await runBilling();
+  assert.ok(
+    await db("invoices")
+      .where({ subscription_id: s.id, period_start: due })
+      .first(),
+  );
+});
+test("regression: draft debt excluded and old confirmed debt reconciles with aging", async () => {
+  const a = await sub(),
+    b = await sub();
+  await invoice(a, {
+    status: "Draft",
+    due_date: addPeriod(today(), "daily", -10),
+  });
+  await invoice(b, { due_date: addPeriod(today(), "yearly", -2) });
+  await refreshSummary();
+  const summary = (await call("get", "/dashboard/summary")).body;
+  const aging = (await call("get", "/reports/aging")).body;
+  assert.equal(summary.outstanding, 100);
+  assert.equal(summary.overdue_count, 1);
+  assert.equal(
+    aging.data.reduce((n, r) => n + r.amount, 0),
+    100,
+  );
+  await reminders();
+  assert.equal(
+    Number((await db("notifications").count("* as n").first()).n),
+    2,
+  );
+});
+test("regression: sub-cent payments rejected before creating zero-value entries", async () => {
+  const i = await invoice(await sub());
+  assert.equal(
+    (
+      await call("post", "/payments", {
+        invoice_id: i.id,
+        method: "bank",
+        amount: 0.001,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(Number((await db("payments").count("* as n").first()).n), 0);
+});
+test("regression: full Draft to Quotation to Confirmed to Active sequence", async () => {
+  const s = await sub({ status: "Draft" });
+  for (const a of ["quotation", "confirm", "activate"])
+    assert.equal(
+      (await call("post", `/subscriptions/${s.id}/${a}`)).status,
+      200,
+    );
+});
+test("billing anchors recover month-end and leap-year anniversaries", () => {
+  assert.equal(
+    addPeriod("2026-02-28", "monthly", 1, "2026-01-31"),
+    "2026-03-31",
+  );
+  assert.equal(
+    addPeriod("2027-02-28", "yearly", 1, "2024-02-29"),
+    "2028-02-29",
+  );
+});
+test("regression: historical revenue is independent of materialized summaries", async () => {
+  const s = await sub(),
+    i = await invoice(s, { status: "Paid", paid_amount: 100 }),
+    past = addPeriod(today(), "daily", -1);
+  await db("payments").insert({
+    id: id(),
+    invoice_id: i.id,
+    customer_id: customer,
+    method: "bank",
+    amount: 100,
+    payment_date: past,
+    recorded_by: admin,
+    created_at: now(),
+  });
+  const r = (await call("get", `/reports/revenue?from=${past}&to=${past}`))
+    .body;
+  assert.equal(r.data[0].revenue, 100);
+});
+test("versioned migration is repeatable and retains existing records", async () => {
+  const s = await sub();
+  await migrate();
+  assert.ok(await db("subscriptions").where({ id: s.id }).first());
+  assert.equal(
+    Number((await db("schema_migrations").count("* as n").first()).n),
+    3,
+  );
+});
+test("parallel confirmation never overspends final discount capacity", async () => {
+  const did = id();
+  await db("discounts").insert({
+    id: did,
+    name: "Last offer",
+    type: "fixed",
+    value: 10,
+    max_uses: 1,
+    used_count: 0,
+    min_amount: 0,
+    min_quantity: 1,
+    scope: "subscription",
+    active: true,
+    created_at: now(),
+  });
+  const a = await invoice(await sub(), {
+      status: "Draft",
+      total: 90,
+      discount_total: 10,
+      applied_discounts: JSON.stringify([{ id: did, amount: 10 }]),
+    }),
+    b = await invoice(await sub(), {
+      status: "Draft",
+      total: 90,
+      discount_total: 10,
+      applied_discounts: JSON.stringify([{ id: did, amount: 10 }]),
+    });
+  const rs = await Promise.allSettled([
+    confirmInvoice(a.id, admin),
+    confirmInvoice(b.id, admin),
+  ]);
+  assert.equal(rs.filter((r) => r.status === "fulfilled").length, 1);
+  assert.equal(
+    (await db("discounts").where({ id: did }).first()).used_count,
+    1,
+  );
+});
+test("amendments preserve agreed prices, apply prospectively, and reject stale revisions", async () => {
+  const s = await sub();
+  await db("plans").update({ price: 200 });
+  const result = await call("put", `/subscriptions/${s.id}`, {
+    expected_revision: 0,
+    lines: [{ product_id: product, quantity: 3 }],
+    expiry_date: addPeriod(today(), "yearly", 2),
+    payment_terms: 30,
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.body.lines[0].quantity, 1);
+  assert.equal(result.body.pending_lines[0].quantity, 3);
+  assert.equal(result.body.pending_lines[0].unit_price, 100);
+  assert.ok(result.body.pending_effective_date > today());
+  assert.equal(
+    (
+      await call("put", `/subscriptions/${s.id}`, {
+        expected_revision: 0,
+        lines: [{ product_id: product, quantity: 4 }],
+      })
+    ).status,
+    409,
+  );
+  await runBilling();
+  assert.equal(
+    JSON.parse(
+      (await db("invoices").where({ subscription_id: s.id }).first()).lines,
+    )[0].quantity,
+    1,
+  );
+  await db("subscriptions")
+    .where({ id: s.id })
+    .update({ pending_effective_date: today(), next_billing_date: today() });
+  await db("invoices").delete();
+  await runBilling();
+  assert.equal(
+    JSON.parse(
+      (await db("invoices").where({ subscription_id: s.id }).first()).lines,
+    )[0].quantity,
+    3,
+  );
+});
+test("portal amendments enforce ownership, prevent contract overrides and keep cost private", async () => {
+  const s = await sub(),
+    other = id();
+  await db("users").insert({
+    id: other,
+    name: "Other",
+    email: "other@test.local",
+    role: "CUSTOMER",
+    password_hash: "unused",
+    created_at: now(),
+  });
+  const ct = jwt.sign({ role: "CUSTOMER" }, process.env.JWT_SECRET, {
+    subject: customer,
+    issuer: "brightloop",
+    audience: "brightloop-local",
+  });
+  const ot = jwt.sign({ role: "CUSTOMER" }, process.env.JWT_SECRET, {
+    subject: other,
+    issuer: "brightloop",
+    audience: "brightloop-local",
+  });
+  const payload = {
+    expected_revision: 0,
+    lines: [{ product_id: product, quantity: 2 }],
+  };
+  assert.equal(
+    (
+      await api
+        .put(`/api/portal/subscriptions/${s.id}`)
+        .set("Authorization", "Bearer " + ot)
+        .send(payload)
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await api
+        .put(`/api/portal/subscriptions/${s.id}`)
+        .set("Authorization", "Bearer " + ct)
+        .send({ ...payload, payment_terms: 0 })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await api
+        .put(`/api/portal/subscriptions/${s.id}`)
+        .set("Authorization", "Bearer " + ct)
+        .send(payload)
+    ).status,
+    200,
+  );
+  const catalog = await api
+    .get("/api/portal/catalog")
+    .set("Authorization", "Bearer " + ct);
+  assert.equal(catalog.body.data[0].cost_price, undefined);
+});
+test("global server search finds old records outside cached pages and scopes customers", async () => {
+  const s = await sub({
+    number: "ANCIENT-UNIQUE",
+    created_at: "2020-01-01T00:00:00Z",
+  });
+  const r = (await call("get", "/search?search=ANCIENT")).body;
+  assert.equal(r.subscriptions[0].id, s.id);
+  assert.equal(
+    (await call("get", "/search?search=A")).body.subscriptions.length,
+    0,
+  );
+});
+test("session version revokes previously issued access tokens immediately", async () => {
+  assert.equal((await call("get", "/auth/me")).status, 200);
+  assert.equal((await call("post", "/auth/logout")).status, 200);
+  assert.equal((await call("get", "/auth/me")).status, 401);
+});
+test("SMTP sends clickable resets and PDF attachments; failed delivery retries with one worker claim", async () => {
+  const { SMTPServer } = await import("smtp-server");
+  const { email, deliverOutbox } = await import("../mailer.mjs");
+  const received = [];
+  const smtp = new SMTPServer({
+    authOptional: true,
+    disabledCommands: ["STARTTLS"],
+    onData(stream, session, done) {
+      const chunks = [];
+      stream.on("data", (c) => chunks.push(c));
+      stream.on("end", () => {
+        received.push(Buffer.concat(chunks).toString());
+        done();
+      });
+    },
+  });
+  await new Promise((r) => smtp.listen(0, "127.0.0.1", r));
+  const port = smtp.server.address().port;
+  Object.assign(process.env, {
+    MAIL_TRANSPORT: "smtp",
+    SMTP_HOST: "127.0.0.1",
+    SMTP_PORT: String(port),
+    SMTP_REQUIRE_TLS: "false",
+    PUBLIC_APP_URL: "https://billing.example.test",
+  });
+  try {
+    await call("post", "/auth/forgot-password", {
+      email: "customer@test.local",
+    });
+    assert.equal(received.length, 1);
+    assert.match(received[0].replace(/=\r\n/g, ""), /billing\.example\.test/);
+    assert.match(received[0], /reset(?:=|=3D)/);
+    const s = await sub(),
+      i = await invoice(s);
+    assert.equal((await call("post", `/invoices/${i.id}/send`)).status, 200);
+    assert.equal(received.length, 2);
+    assert.match(received[1], /application\/pdf/);
+    assert.match(received[1], new RegExp(i.number));
+    process.env.SMTP_PORT = "1";
+    await email(
+      "retry-test",
+      "customer@test.local",
+      "Retry message",
+      "Durable body",
+    );
+    const row = await db("notifications").where({ key: "retry-test" }).first();
+    assert.equal(row.delivery_status, "failed");
+    process.env.SMTP_PORT = String(port);
+    await db("notifications")
+      .where({ id: row.id })
+      .update({ next_attempt_at: "2000-01-01T00:00:00Z" });
+    await Promise.all([deliverOutbox(), deliverOutbox()]);
+    assert.equal(received.length, 3);
+    assert.equal(
+      (await db("notifications").where({ id: row.id }).first()).delivery_status,
+      "sent",
+    );
+    assert.equal(
+      await email("retry-test", "customer@test.local", "Duplicate", "Not sent"),
+      false,
+    );
+    assert.equal(received.length, 3);
+  } finally {
+    process.env.MAIL_TRANSPORT = "local";
+    delete process.env.SMTP_HOST;
+    await new Promise((r) => smtp.close(r));
+  }
+});
+test("payment retry keys prevent duplicate partial payments and reject changed payloads", async () => {
+  const i = await invoice(await sub()),
+    body = {
+      invoice_id: i.id,
+      method: "bank",
+      amount: 25,
+      note: "Bank reference 42",
+    };
+  const post = (payload) =>
+    api
+      .post("/api/payments")
+      .set("Authorization", "Bearer " + token)
+      .set("Idempotency-Key", "bank_reference_42")
+      .send(payload);
+  const [a, b] = await Promise.all([post(body), post(body)]);
+  assert.equal(a.status, 201);
+  assert.equal(b.status, 201);
+  assert.equal(a.body.id, b.body.id);
+  assert.equal(
+    Number((await db("invoices").where({ id: i.id }).first()).paid_amount),
+    25,
+  );
+  assert.equal((await post({ ...body, amount: 30 })).status, 409);
+});
+test("add-on line is scheduled and can be removed without rewriting issued service", async () => {
+  const addon = id();
+  await db("products").insert({
+    id: addon,
+    name: "Storage add-on",
+    sales_price: 25,
+    cost_price: 5,
+    created_at: now(),
+    active: true,
+  });
+  const s = await sub();
+  const r = await call("put", `/subscriptions/${s.id}`, {
+    expected_revision: 0,
+    lines: [
+      { product_id: product, quantity: 1 },
+      { product_id: addon, quantity: 2 },
+    ],
+  });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.pending_lines[1].unit_price, 25);
+  assert.equal(r.body.lines.length, 1);
+  const removed = await call("put", `/subscriptions/${s.id}`, {
+    expected_revision: 1,
+    lines: [{ product_id: product, quantity: 1 }],
+  });
+  assert.equal(removed.status, 200);
+  assert.equal(removed.body.pending_lines.length, 1);
+});
+test("500 due subscriptions survive two overlapping billing workers without duplicate periods", async () => {
+  const rows = Array.from({ length: 500 }, (_, i) => ({
+    id: id(),
+    number: `CONCURRENT-${i}`,
+    customer_id: customer,
+    plan_id: plan,
+    status: "Active",
+    start_date: today(),
+    expiry_date: addPeriod(today(), "yearly"),
+    next_billing_date: today(),
+    payment_terms: 14,
+    lines: JSON.stringify([
+      { product_id: product, name: "Product", quantity: 1, unit_price: 100 },
+    ]),
+    created_at: now(),
+  }));
+  for (let i = 0; i < rows.length; i += 50)
+    await db("subscriptions").insert(rows.slice(i, i + 50));
+  const runs = await Promise.all([
+    runBilling("worker-A"),
+    runBilling("worker-B"),
+  ]);
+  assert.equal(
+    runs.reduce((n, r) => n + r.failed, 0),
+    0,
+  );
+  assert.equal(Number((await db("invoices").count("* as n").first()).n), 500);
+  assert.equal(
+    (
+      await db("invoices")
+        .select("subscription_id", "period_start")
+        .count("* as n")
+        .groupBy("subscription_id", "period_start")
+        .havingRaw("count(*) > 1")
+    ).length,
+    0,
+  );
+});
+test("failed pricing rolls back cursor/invoice and does not auto-close away unbilled debt", async () => {
+  const due = addPeriod(today(), "monthly", -2),
+    s = await sub({
+      start_date: due,
+      next_billing_date: due,
+      expiry_date: addPeriod(today(), "daily", -1),
+      lines: JSON.stringify([
+        {
+          product_id: product,
+          name: "Broken import",
+          quantity: 1,
+          unit_price: "invalid",
+        },
+      ]),
+    });
+  const first = await runBilling();
+  assert.equal(first.failed, 1);
+  assert.equal(Number((await db("invoices").count("* as n").first()).n), 0);
+  let row = await db("subscriptions").where({ id: s.id }).first();
+  assert.equal(row.next_billing_date, due);
+  assert.equal(row.status, "Active");
+  await db("subscriptions")
+    .where({ id: s.id })
+    .update({
+      lines: JSON.stringify([
+        {
+          product_id: product,
+          name: "Repaired import",
+          quantity: 1,
+          unit_price: 100,
+        },
+      ]),
+    });
+  const retry = await runBilling();
+  assert.equal(retry.failed, 0);
+  assert.ok(retry.created >= 2);
+  row = await db("subscriptions").where({ id: s.id }).first();
+  assert.equal(row.status, "Closed");
+});
+test("minimum seat quantity applies to the plan product, not an independent add-on", async () => {
+  await db("plans").where({ id: plan }).update({ min_quantity: 3 });
+  const addon = id();
+  await db("products").insert({
+    id: addon,
+    name: "Add-on",
+    sales_price: 25,
+    created_at: now(),
+    active: true,
+  });
+  const r = await call("post", "/subscriptions", {
+    customer_id: customer,
+    plan_id: plan,
+    lines: [
+      { product_id: product, quantity: 3 },
+      { product_id: addon, quantity: 1 },
+    ],
+  });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.lines.length, 2);
 });

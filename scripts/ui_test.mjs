@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { readFile, stat, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-const root = path.resolve("dist");
+const root = path.resolve(process.env.UI_TEST_ROOT || "dist");
 const mime = {
   ".html": "text/html",
   ".js": "text/javascript",
@@ -187,7 +187,12 @@ try {
       .click();
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(300);
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+    assert.equal(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+      true,
+    );
     console.log(
       "MOBILE OVERFLOW",
       await page.evaluate(() => ({

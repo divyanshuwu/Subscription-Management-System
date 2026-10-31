@@ -11,6 +11,7 @@ export const db = knex(
     ? {
         client: "pg",
         connection: process.env.DATABASE_URL,
+        searchPath: [process.env.DB_SCHEMA || "public"],
         pool: { min: 0, max: 10 },
       }
     : {
@@ -33,7 +34,11 @@ export const db = knex(
 export const id = () => randomUUID();
 export const today = () => new Date().toISOString().slice(0, 10);
 export const now = () => new Date().toISOString();
-export const round = (v) => new Decimal(v).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber();
+export const round = (v) => {
+  const value = new Decimal(v);
+  if (!value.isFinite()) throw new Error("Non-finite monetary result");
+  return value.toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber();
+};
 export function decode(row) {
   if (!row) return row;
   const r = { ...row };
@@ -52,7 +57,9 @@ export function decode(row) {
     if (typeof r[k] === "string") {
       try {
         r[k] = JSON.parse(r[k]);
-      } catch {}
+      } catch {
+        /* Legacy non-JSON values remain available for explicit repair. */
+      }
     }
   }
   for (const k of [

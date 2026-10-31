@@ -1,0 +1,5 @@
+
+> brightloop-subscription-workspace@0.0.0 test:production
+> node scripts/production_smoke.mjs
+
+PASS production static/API/auth/security headers and SQLite backup/integrity smoke

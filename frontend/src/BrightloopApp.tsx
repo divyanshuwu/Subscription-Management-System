@@ -16,13 +16,10 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
-  ArrowDown,
   ArrowDownLeft,
-  ArrowDownToLine,
   ArrowRight,
   ArrowUpRight,
   Bell,
-  BookOpen,
   Box,
   CalendarDays,
   Check,
@@ -37,17 +34,14 @@ import {
   CreditCard,
   Download,
   Ellipsis,
-  ExternalLink,
   FileCheck2,
   FileClock,
   FileText,
   FolderKanban,
-  HelpCircle,
   History,
   LayoutDashboard,
   Layers3,
   Leaf,
-  ListFilter,
   LoaderCircle,
   LockKeyhole,
   LogOut,
@@ -299,7 +293,12 @@ export default function BrightloopApp() {
     }
   });
   const [user, setUser] = useState<User | null>(() => {
-    if (API_URL && (!localStorage.getItem("brightloop-token") || window.location.hash.startsWith("#reset="))) return null;
+    if (
+      API_URL &&
+      (!localStorage.getItem("brightloop-token") ||
+        window.location.hash.startsWith("#reset="))
+    )
+      return null;
     try {
       return (
         JSON.parse(localStorage.getItem("brightloop-user") || "null") ||
@@ -337,22 +336,35 @@ export default function BrightloopApp() {
   const [page, setPage] = useState(1);
   const [dateOpen, setDateOpen] = useState(false);
   const [dateRange, setDateRange] = useState("This month");
-  const [from, setFrom] = useState(() => API_URL ? new Date().toISOString().slice(0,7)+"-01" : "2026-10-01");
-  const [to, setTo] = useState(() => API_URL ? new Date().toISOString().slice(0,10) : DEMO_TODAY);
+  const [from, setFrom] = useState(() =>
+    API_URL ? new Date().toISOString().slice(0, 7) + "-01" : "2026-10-01",
+  );
+  const [to, setTo] = useState(() =>
+    API_URL ? new Date().toISOString().slice(0, 10) : DEMO_TODAY,
+  );
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [resetToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("reset") || "");
-  const [authMode, setAuthMode] = useState(() => new URLSearchParams(window.location.hash.slice(1)).has("reset") ? "reset" : "login");
-  const [editingSubscription,setEditingSubscription] = useState<Subscription|null>(null);
-  const [serverRenewals,setServerRenewals] = useState<Subscription[]>([]);
-  const [serverSearch,setServerSearch] = useState<Subscription[]>([]);
+  const [resetToken] = useState(
+    () => new URLSearchParams(window.location.hash.slice(1)).get("reset") || "",
+  );
+  const [authMode, setAuthMode] = useState(() =>
+    new URLSearchParams(window.location.hash.slice(1)).has("reset")
+      ? "reset"
+      : "login",
+  );
+  const [editingSubscription, setEditingSubscription] =
+    useState<Subscription | null>(null);
+  const [serverRenewals, setServerRenewals] = useState<Subscription[]>([]);
+  const [serverSearch, setServerSearch] = useState<Subscription[]>([]);
   const [formError, setFormError] = useState("");
   const [serverSummary, setServerSummary] = useState<Record<
     string,
     number
   > | null>(null);
-  const [serverAging, setServerAging] = useState<{ amount: number; count: number }[]>([]);
+  const [serverAging, setServerAging] = useState<
+    { amount: number; count: number }[]
+  >([]);
   const [notificationRead, setNotificationRead] = useState(false);
   const [businessName, setBusinessName] = useState(
     localStorage.getItem("brightloop-business") || "Brightloop Software",
@@ -362,6 +374,7 @@ export default function BrightloopApp() {
     scanned: number;
     skipped: number;
   } | null>(null);
+  const paymentRequestKey = useRef(uid());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCustomer = user?.role === "CUSTOMER";
   const isAdmin = user?.role === "ADMIN";
@@ -442,22 +455,55 @@ export default function BrightloopApp() {
     }
   }, [user, from, to, notify]);
   useEffect(() => {
-    let cancelled=false;
-    queueMicrotask(()=>{if(!cancelled)void refresh();});
-    return()=>{cancelled=true;};
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void refresh();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [refresh]);
-  useEffect(()=>{
-    if(resetToken)window.history.replaceState(null,"",window.location.pathname+window.location.search);
-    const expired=()=>{setUser(null);notify("Your session ended. Please sign in again.",true);};
-    window.addEventListener("brightloop-session-expired",expired);
-    return()=>window.removeEventListener("brightloop-session-expired",expired);
-  },[resetToken,notify]);
-  useEffect(()=>{
-    if(!API_URL || modal!=="search")return;
-    let cancelled=false;
-    const timer=setTimeout(()=>{void request(`/search?search=${encodeURIComponent(globalSearch)}`).then(r=>{if(cancelled)return;setServerSearch(r.subscriptions);setData(d=>({...d,subscriptions:[...d.subscriptions.filter(s=>!r.subscriptions.some((x:Subscription)=>x.id===s.id)),...r.subscriptions]}));}).catch(e=>notify(e.message,true));},180);
-    return()=>{cancelled=true;clearTimeout(timer);};
-  },[modal,globalSearch,notify]);
+  useEffect(() => {
+    if (resetToken)
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    const expired = () => {
+      setUser(null);
+      notify("Your session ended. Please sign in again.", true);
+    };
+    window.addEventListener("brightloop-session-expired", expired);
+    return () =>
+      window.removeEventListener("brightloop-session-expired", expired);
+  }, [resetToken, notify]);
+  useEffect(() => {
+    if (!API_URL || modal !== "search") return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      void request(`/search?search=${encodeURIComponent(globalSearch)}`)
+        .then((r) => {
+          if (cancelled) return;
+          setServerSearch(r.subscriptions);
+          setData((d) => ({
+            ...d,
+            subscriptions: [
+              ...d.subscriptions.filter(
+                (s) =>
+                  !r.subscriptions.some((x: Subscription) => x.id === s.id),
+              ),
+              ...r.subscriptions,
+            ],
+          }));
+        })
+        .catch((e) => notify(e.message, true));
+    }, 180);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [modal, globalSearch, notify]);
   useEffect(() => {
     if (!API_URL || detail?.type !== "subscription") return;
     let cancelled = false;
@@ -466,9 +512,26 @@ export default function BrightloopApp() {
         if (cancelled) return;
         setData((d) => ({
           ...d,
-          subscriptions:[...d.subscriptions.filter(s=>s.id!==row.id),row],
-          ...(row.plan?{plans:[...d.plans.filter(p=>p.id!==row.plan.id),row.plan]}:{}),
-          ...(row.customer?{users:[...d.users.filter(u=>u.id!==row.customer.id),{...row.customer,role:"CUSTOMER" as const}]}:{}),
+          subscriptions: [
+            ...d.subscriptions.filter((s) => s.id !== row.id),
+            row,
+          ],
+          ...(row.plan
+            ? {
+                plans: [
+                  ...d.plans.filter((p) => p.id !== row.plan.id),
+                  row.plan,
+                ],
+              }
+            : {}),
+          ...(row.customer
+            ? {
+                users: [
+                  ...d.users.filter((u) => u.id !== row.customer.id),
+                  { ...row.customer, role: "CUSTOMER" as const },
+                ],
+              }
+            : {}),
           audit: [
             ...(row.history || []),
             ...d.audit.filter((a) => a.entity_id !== row.id),
@@ -514,6 +577,7 @@ export default function BrightloopApp() {
     setDetail(null);
   }
   function openModal(name: string) {
+    if (name === "payment") paymentRequestKey.current = uid();
     setFormError("");
     setSelectedPlanId(data.plans.find((p) => p.active)?.id || "");
     if (name === "quotation" && API_URL)
@@ -525,7 +589,8 @@ export default function BrightloopApp() {
   }
   const customers = data.users.filter((u) => u.role === "CUSTOMER");
   const getCustomer = (id: string) =>
-    data.users.find((u) => u.id === id) || serverRenewals.find(s=>s.customer_id===id)?.customer || {
+    data.users.find((u) => u.id === id) ||
+    serverRenewals.find((s) => s.customer_id === id)?.customer || {
       id,
       name: "Customer",
       company: "Customer",
@@ -550,8 +615,7 @@ export default function BrightloopApp() {
     [data.payments, isCustomer, user],
   );
   const overdue = invoices.filter(
-    (i) =>
-      i.status === "Confirmed" && i.due_date < currentDate,
+    (i) => i.status === "Confirmed" && i.due_date < currentDate,
   );
   const activeCount =
     serverSummary?.active_subscriptions ??
@@ -566,13 +630,16 @@ export default function BrightloopApp() {
     invoices
       .filter((i) => !["Paid", "Cancelled"].includes(i.status))
       .reduce((s, i) => s + Number(i.total) - Number(i.paid_amount), 0);
-  const overdueCount=serverSummary?.overdue_count ?? overdue.length;
-  const overdueAmount = serverSummary?.overdue_amount ?? overdue.reduce(
-    (s, i) => s + Number(i.total) - Number(i.paid_amount), 0);
-  const renewals = API_URL ? serverRenewals : subscriptions
-    .filter((s) => s.status === "Active" && s.expiry_date >= currentDate)
-    .sort((a, b) => a.expiry_date.localeCompare(b.expiry_date))
-    .slice(0, 4);
+  const overdueCount = serverSummary?.overdue_count ?? overdue.length;
+  const overdueAmount =
+    serverSummary?.overdue_amount ??
+    overdue.reduce((s, i) => s + Number(i.total) - Number(i.paid_amount), 0);
+  const renewals = API_URL
+    ? serverRenewals
+    : subscriptions
+        .filter((s) => s.status === "Active" && s.expiry_date >= currentDate)
+        .sort((a, b) => a.expiry_date.localeCompare(b.expiry_date))
+        .slice(0, 4);
   function auditLocal(
     d: Data,
     type: string,
@@ -904,7 +971,7 @@ export default function BrightloopApp() {
           customer_id: form.customer_id,
           plan_id: p.id,
           start_date: form.start_date,
-          ...(form.expiry_date ? {expiry_date:form.expiry_date} : {}),
+          ...(form.expiry_date ? { expiry_date: form.expiry_date } : {}),
           payment_terms: Number(form.payment_terms),
           lines: [
             {
@@ -973,6 +1040,7 @@ export default function BrightloopApp() {
         if (API_URL)
           await request("/payments", {
             method: "POST",
+            headers: { "Idempotency-Key": paymentRequestKey.current },
             body: JSON.stringify(payload),
           });
         else {
@@ -1562,10 +1630,9 @@ export default function BrightloopApp() {
         <div className="stat-value">
           {money(outstanding)}
           <span className="stat-count">
-            {
-              serverSummary?.outstanding_count ?? invoices.filter((i) => !["Paid", "Cancelled"].includes(i.status))
-                .length
-            }{" "}
+            {serverSummary?.outstanding_count ??
+              invoices.filter((i) => !["Paid", "Cancelled"].includes(i.status))
+                .length}{" "}
             invoices
           </span>
         </div>
@@ -2075,7 +2142,8 @@ export default function BrightloopApp() {
                     >
                       <CalendarDays size={15} />
                       <span>
-                        {dateLabel(from, true)} – {dateLabel(to, true)}, 2026
+                        {dateLabel(from, true)} – {dateLabel(to, true)},{" "}
+                        {to.slice(0, 4)}
                       </span>
                       <ChevronDown size={13} />
                     </button>
@@ -2093,18 +2161,34 @@ export default function BrightloopApp() {
                             key={label}
                             onClick={() => {
                               setDateRange(label);
+                              const reference = new Date(
+                                  `${currentDate}T12:00:00Z`,
+                                ),
+                                year = reference.getUTCFullYear(),
+                                month = reference.getUTCMonth();
+                              const iso = (d: Date) =>
+                                d.toISOString().slice(0, 10);
                               setFrom(
-                                label === "This month"
-                                  ? "2026-10-01"
-                                  : label === "Last month"
-                                    ? "2026-09-01"
-                                    : label === "This quarter"
-                                      ? "2026-10-01"
-                                      : "2026-01-01",
+                                iso(
+                                  new Date(
+                                    Date.UTC(
+                                      year,
+                                      label === "This month"
+                                        ? month
+                                        : label === "Last month"
+                                          ? month - 1
+                                          : label === "This quarter"
+                                            ? Math.floor(month / 3) * 3
+                                            : 0,
+                                      1,
+                                      12,
+                                    ),
+                                  ),
+                                ),
                               );
                               setTo(
                                 label === "Last month"
-                                  ? "2026-09-30"
+                                  ? iso(new Date(Date.UTC(year, month, 0, 12)))
                                   : currentDate,
                               );
                               setDateOpen(false);
@@ -2326,7 +2410,7 @@ export default function BrightloopApp() {
               "Audit log",
             ].includes(pageName) && (
               <ServerRecords
-                key={pageName}
+                key={`records-${pageName}`}
                 name={pageName}
                 user={user}
                 data={data}
@@ -3087,13 +3171,16 @@ export default function BrightloopApp() {
                           <span>{label}</span>
                           <strong>
                             {money(
-                              serverAging[i]?.amount ?? rows.reduce(
-                                (n, v) => n + v.total - v.paid_amount,
-                                0,
-                              ),
+                              serverAging[i]?.amount ??
+                                rows.reduce(
+                                  (n, v) => n + v.total - v.paid_amount,
+                                  0,
+                                ),
                             )}
                           </strong>
-                          <small>{serverAging[i]?.count ?? rows.length} invoices</small>
+                          <small>
+                            {serverAging[i]?.count ?? rows.length} invoices
+                          </small>
                           <i
                             style={{
                               width: `${Math.max(3, (rows.length / Math.max(overdue.length, 1)) * 100)}%`,
@@ -3339,7 +3426,7 @@ export default function BrightloopApp() {
             pageName,
           ) && (
             <CatalogManager
-              key={pageName}
+              key={`catalog-${pageName}`}
               page={pageName}
               data={data}
               isAdmin={isAdmin}
@@ -3469,7 +3556,14 @@ export default function BrightloopApp() {
                     {globalSearch && (
                       <>
                         <span className="dropdown-label">SUBSCRIPTIONS</span>
-                        {(API_URL ? serverSearch : subscriptions.filter(s=>`${s.number} ${getCustomer(s.customer_id).company}`.toLowerCase().includes(globalSearch.toLowerCase())))
+                        {(API_URL
+                          ? serverSearch
+                          : subscriptions.filter((s) =>
+                              `${s.number} ${getCustomer(s.customer_id).company}`
+                                .toLowerCase()
+                                .includes(globalSearch.toLowerCase()),
+                            )
+                        )
                           .slice(0, 5)
                           .map((s) => (
                             <button
@@ -3676,35 +3770,80 @@ export default function BrightloopApp() {
                   <form onSubmit={handleForm}>
                     {(modal === "subscription" || modal === "quotation") && (
                       <>
-                        {API_URL ? <ServerPicker endpoint="/customers" name="customer_id" label="Customer" initial={customers}/> : (<Field label="Customer">
-                          <select name="customer_id" required defaultValue="">
-                            <option value="" disabled>
-                              Select a customer
-                            </option>
-                            {customers.map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.company || c.name} · {c.email}
+                        {API_URL ? (
+                          <ServerPicker
+                            endpoint="/customers"
+                            name="customer_id"
+                            label="Customer"
+                            initial={customers}
+                          />
+                        ) : (
+                          <Field label="Customer">
+                            <select name="customer_id" required defaultValue="">
+                              <option value="" disabled>
+                                Select a customer
                               </option>
-                            ))}
-                          </select>
-                        </Field>)}
-                        {API_URL && modal==="subscription" ? <ServerPicker endpoint="/plans" name="plan_id" label="Billing plan" initial={data.plans.filter(p=>p.active)} onSelect={id=>{setSelectedPlanId(id);void request(`/plans/${id}`).then(async p=>{const product=await request(`/products/${p.product_id}`);setData(d=>({...d,plans:[...d.plans.filter(x=>x.id!==p.id),p],products:[...d.products.filter(x=>x.id!==product.id),product]}));}).catch(e=>notify(e.message,true));}}/> : ((modal === "subscription" || !API_URL) && (<Field label="Billing plan">
-                          <select
-                            name="plan_id"
-                            required
-                            value={selectedPlanId}
-                            onChange={(e) => setSelectedPlanId(e.target.value)}
-                          >
-                            {data.plans
-                              .filter((p) => p.active)
-                              .map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} — {money(p.price)}/
-                                  {p.billing_frequency}
+                              {customers.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.company || c.name} · {c.email}
                                 </option>
                               ))}
-                          </select>
-                        </Field>))}
+                            </select>
+                          </Field>
+                        )}
+                        {API_URL && modal === "subscription" ? (
+                          <ServerPicker
+                            endpoint="/plans"
+                            name="plan_id"
+                            label="Billing plan"
+                            initial={data.plans.filter((p) => p.active)}
+                            onSelect={(id) => {
+                              setSelectedPlanId(id);
+                              void request(`/plans/${id}`)
+                                .then(async (p) => {
+                                  const product = await request(
+                                    `/products/${p.product_id}`,
+                                  );
+                                  setData((d) => ({
+                                    ...d,
+                                    plans: [
+                                      ...d.plans.filter((x) => x.id !== p.id),
+                                      p,
+                                    ],
+                                    products: [
+                                      ...d.products.filter(
+                                        (x) => x.id !== product.id,
+                                      ),
+                                      product,
+                                    ],
+                                  }));
+                                })
+                                .catch((e) => notify(e.message, true));
+                            }}
+                          />
+                        ) : (
+                          (modal === "subscription" || !API_URL) && (
+                            <Field label="Billing plan">
+                              <select
+                                name="plan_id"
+                                required
+                                value={selectedPlanId}
+                                onChange={(e) =>
+                                  setSelectedPlanId(e.target.value)
+                                }
+                              >
+                                {data.plans
+                                  .filter((p) => p.active)
+                                  .map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name} — {money(p.price)}/
+                                      {p.billing_frequency}
+                                    </option>
+                                  ))}
+                              </select>
+                            </Field>
+                          )
+                        )}
                         {modal === "quotation" && API_URL && (
                           <Field label="Quotation template">
                             <select name="template_id" required>
@@ -3769,7 +3908,11 @@ export default function BrightloopApp() {
                                 />
                               </Field>
                             </div>
-                            {API_URL && <Field label="Term expiry (optional)"><input type="date" name="expiry_date"/></Field>}
+                            {API_URL && (
+                              <Field label="Term expiry (optional)">
+                                <input type="date" name="expiry_date" />
+                              </Field>
+                            )}
                             <Field label="Payment terms">
                               <select name="payment_terms">
                                 <option value="14">
@@ -3787,7 +3930,13 @@ export default function BrightloopApp() {
                               you’re ready.
                             </div>
                           </>
-                        ) : API_URL ? <div className="form-note">The selected template defines plan, product lines and validity. Prices are frozen when the quotation is created.</div> : (
+                        ) : API_URL ? (
+                          <div className="form-note">
+                            The selected template defines plan, product lines
+                            and validity. Prices are frozen when the quotation
+                            is created.
+                          </div>
+                        ) : (
                           <Field label="Quotation valid for">
                             <select name="validity_days">
                               <option value="30">30 days</option>
@@ -4238,12 +4387,44 @@ export default function BrightloopApp() {
                         <strong>{money(l.quantity * l.unit_price)}</strong>
                       </div>
                     ))}
-                    {API_URL && selectedSub.pricing_preview && <div className="form-note">Current tax estimate: {money(selectedSub.pricing_preview.tax_total,2)} · Estimated total: {money(selectedSub.pricing_preview.total,2)}. Final rules are snapshotted on each invoice.</div>}
-                    {selectedSub.pending_effective_date && <div className="form-note">Line changes scheduled for {dateLabel(selectedSub.pending_effective_date)}.</div>}
+                    {API_URL && selectedSub.pricing_preview && (
+                      <div className="form-note">
+                        Current tax estimate:{" "}
+                        {money(selectedSub.pricing_preview.tax_total, 2)} ·
+                        Estimated total:{" "}
+                        {money(selectedSub.pricing_preview.total, 2)}. Final
+                        rules are snapshotted on each invoice.
+                      </div>
+                    )}
+                    {selectedSub.pending_effective_date && (
+                      <div className="form-note">
+                        Line changes scheduled for{" "}
+                        {dateLabel(selectedSub.pending_effective_date)}.
+                      </div>
+                    )}
                     <h3>Make the next move</h3>
                     <div className="detail-actions">
-                      {API_URL && selectedSub.status !== "Closed" && <button className="button" onClick={()=>setEditingSubscription(selectedSub)}><Settings2 size={16}/>Edit subscription</button>}
-                      {!isCustomer && selectedSub.status==="Draft" && <button className="button" disabled={busy} onClick={()=>void subscriptionAction(selectedSub,"quotation")}><FileText size={16}/>Prepare quotation</button>}
+                      {API_URL && selectedSub.status !== "Closed" && (
+                        <button
+                          className="button"
+                          onClick={() => setEditingSubscription(selectedSub)}
+                        >
+                          <Settings2 size={16} />
+                          Edit subscription
+                        </button>
+                      )}
+                      {!isCustomer && selectedSub.status === "Draft" && (
+                        <button
+                          className="button"
+                          disabled={busy}
+                          onClick={() =>
+                            void subscriptionAction(selectedSub, "quotation")
+                          }
+                        >
+                          <FileText size={16} />
+                          Prepare quotation
+                        </button>
+                      )}
                       {!isCustomer &&
                         ["Draft", "Quotation"].includes(selectedSub.status) && (
                           <button
@@ -4493,7 +4674,20 @@ export default function BrightloopApp() {
           </motion.div>
         )}
       </AnimatePresence>
-      {editingSubscription && <SubscriptionEditor subscription={editingSubscription} customer={!!isCustomer} onClose={()=>setEditingSubscription(null)} onSaved={()=>{void refresh();setDetail(null);notify("Subscription updated. Active line changes apply at the next future billing boundary.");}}/>}
+      {editingSubscription && (
+        <SubscriptionEditor
+          subscription={editingSubscription}
+          customer={!!isCustomer}
+          onClose={() => setEditingSubscription(null)}
+          onSaved={() => {
+            void refresh();
+            setDetail(null);
+            notify(
+              "Subscription updated. Active line changes apply at the next future billing boundary.",
+            );
+          }}
+        />
+      )}
       <AnimatePresence>
         {toast && (
           <motion.div

@@ -10,16 +10,23 @@
     "seed": "node backend/seed.mjs",
     "test": "node --test backend/tests/*.test.mjs",
     "test:load": "python3 scripts/load_test.py",
-    "test:ui": "node scripts/ui_test.mjs",
+    "test:ui": "node scripts/run_demo_ui.mjs",
     "test:local-ui": "node scripts/run_local_ui.mjs",
     "package:source": "python3 scripts/package_source.py",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check": "npm run lint && npm run build && npm test",
+    "format": "prettier --write \"backend/**/*.mjs\" \"frontend/src/**/*.{ts,tsx}\" \"scripts/*.mjs\"",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-exclude=backend/tests/** --test-coverage-lines=85 --test-coverage-branches=70 --test-coverage-functions=80 --test backend/tests/*.test.mjs",
+    "test:postgres": "node scripts/postgres_test.mjs",
+    "test:acceptance": "node scripts/acceptance_test.mjs",
+    "backup": "node scripts/backup.mjs",
+    "test:production": "node scripts/production_smoke.mjs",
+    "test:visual": "node scripts/visual_test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
-    "@tailwindcss/vite": "^4.2.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^13.0.3",
     "cors": "^2.8.6",
@@ -28,6 +35,7 @@
     "express": "^5.3.0",
     "express-rate-limit": "^8.7.2",
     "framer-motion": "^12.35.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "knex": "^3.3.0",
@@ -38,25 +46,32 @@
     "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.13.1",
-    "tailwindcss": "^4.2.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^5.1.1",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
+    "@vitejs/plugin-react": "^5.2.0",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^16.5.0",
+    "prettier": "^3.9.10",
     "smtp-server": "^3.21.3",
     "supertest": "^7.3.1",
+    "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.0",
-    "vite": "^7.3.1"
+    "typescript-eslint": "^8.72.1",
+    "vite": "^7.3.7"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }

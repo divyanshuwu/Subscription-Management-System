@@ -1,0 +1,179 @@
+{
+  "baseline_commit": "f228f3b7a3029d9563e9be8c4dcdf63a6fe39eb7",
+  "styles": [
+    {
+      "file": "frontend/src/styles.css",
+      "sha256": "0e0088203d21c342a4fa6c046684778fce27b74bdcc9088f81fb01360b7524f0",
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/ServerRecords.css",
+      "sha256": "e9b96adc70f656633a856875bd68a1572131d440ea453d61603b24f8a69d1ec7",
+      "unchanged": true
+    }
+  ],
+  "viewports": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1060
+      },
+      "layout_and_style_equal": true,
+      "measured": {
+        ".sidebar": {
+          "x": 0,
+          "y": 0,
+          "width": 226,
+          "height": 1060,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".topbar": {
+          "x": 226,
+          "y": 0,
+          "width": 1214,
+          "height": 74,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".main-content": {
+          "x": 226,
+          "y": 74,
+          "width": 1214,
+          "height": 1254,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        ".stats-grid": {
+          "x": 258,
+          "y": 241,
+          "width": 1150,
+          "height": 138,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        ".charts-grid": {
+          "x": 258,
+          "y": 401,
+          "width": 1150,
+          "height": 355,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        ".revenue-card": {
+          "x": 258,
+          "y": 401,
+          "width": 743,
+          "height": 355,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".stat-card": {
+          "x": 258,
+          "y": 241,
+          "width": 276,
+          "height": 138,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".renewals-card": {
+          "x": 1021,
+          "y": 778,
+          "width": 387,
+          "height": 485,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "layout_and_style_equal": true,
+      "measured": {
+        ".sidebar": {
+          "x": -224,
+          "y": 0,
+          "width": 224,
+          "height": 844,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".topbar": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 65,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".main-content": {
+          "x": 0,
+          "y": 65,
+          "width": 390,
+          "height": 1970,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        ".stats-grid": {
+          "x": 16,
+          "y": 267,
+          "width": 358,
+          "height": 272,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        ".charts-grid": {
+          "x": 16,
+          "y": 557,
+          "width": 358,
+          "height": 605,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgba(0, 0, 0, 0)"
+        },
+        ".revenue-card": {
+          "x": 16,
+          "y": 557,
+          "width": 358,
+          "height": 353,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".stat-card": {
+          "x": 16,
+          "y": 267,
+          "width": 173,
+          "height": 132,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        },
+        ".renewals-card": {
+          "x": 16,
+          "y": 1691,
+          "width": 358,
+          "height": 286,
+          "font": "\"Inter Variable\", Inter, system-ui, sans-serif",
+          "color": "rgb(39, 59, 51)",
+          "background": "rgb(255, 255, 255)"
+        }
+      }
+    }
+  ]
+}

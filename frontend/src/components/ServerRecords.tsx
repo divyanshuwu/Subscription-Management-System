@@ -20,6 +20,8 @@ import {
   type User,
 } from "../data";
 import "./ServerRecords.css";
+// Heterogeneous legacy table rows; role-specific writes are typed and validated server-side.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 const config: Record<
   string,
@@ -64,7 +66,9 @@ export function ServerRecords({
   const [rows, setRows] = useState<Row[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState(initialFilter === "All" ? "" : initialFilter);
+  const [status, setStatus] = useState(
+    initialFilter === "All" ? "" : initialFilter,
+  );
   const [search, setSearch] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [planId, setPlanId] = useState("");
@@ -83,8 +87,8 @@ export function ServerRecords({
         const params = new URLSearchParams({
           page: String(page),
           page_size: "50",
-          ...(from ? {from} : {}),
-          ...(to ? {to} : {}),
+          ...(from ? { from } : {}),
+          ...(to ? { to } : {}),
         });
         if (search) params.set("search", search);
         if (status === "Overdue") params.set("overdue", "true");
