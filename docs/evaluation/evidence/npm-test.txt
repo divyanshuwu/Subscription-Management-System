@@ -1,0 +1,25 @@
+
+> brightloop-subscription-workspace@0.0.0 test
+> node --test backend/tests/*.test.mjs
+
+TAP version 13
+# Subtest: /home/user/Subscription-Management-System/backend/tests/system.test.mjs
+not ok 1 - /home/user/Subscription-Management-System/backend/tests/system.test.mjs
+  ---
+  duration_ms: 483.16387
+  location: '/home/user/Subscription-Management-System/backend/tests/system.test.mjs:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: ~
+  signal: 'SIGSEGV'
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 486.983755

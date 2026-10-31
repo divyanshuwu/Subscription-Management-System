@@ -1,0 +1,72 @@
+
+> brightloop-subscription-workspace@0.0.0 lint
+> eslint .
+
+
+/home/user/Subscription-Management-System/frontend/src/BrightloopApp.tsx
+   17:3   error  'ArrowDown' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   19:3   error  'ArrowDownToLine' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   23:3   error  'BookOpen' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   38:3   error  'ExternalLink' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   43:3   error  'HelpCircle' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   48:3   error  'ListFilter' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  437:10  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/user/Subscription-Management-System/frontend/src/BrightloopApp.tsx:437:10
+  435 |   }, [user, from, to, notify]);
+  436 |   useEffect(() => {
+> 437 |     void refresh();
+      |          ^^^^^^^ Avoid calling setState() directly within an effect
+  438 |   }, [refresh]);
+  439 |   useEffect(() => {
+  440 |     if (!API_URL || detail?.type !== "subscription") return;  react-hooks/set-state-in-effect
+
+/home/user/Subscription-Management-System/frontend/src/components/CatalogManager.tsx
+   5:35  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        @typescript-eslint/no-explicit-any
+  81:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/home/user/Subscription-Management-System/frontend/src/components/CatalogManager.tsx:81:5
+  79 |   useEffect(() => {
+  80 |     if (!open) return;
+> 81 |     setError("");
+     |     ^^^^^^^^ Avoid calling setState() directly within an effect
+  82 |     if (kind === "templates") {
+  83 |       if (API_URL)
+  84 |         void request("/templates?page_size=100")  react-hooks/set-state-in-effect
+
+/home/user/Subscription-Management-System/frontend/src/components/ServerRecords.tsx
+  23:27  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-explicit-any
+  73:14  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+/home/user/Subscription-Management-System/frontend/src/components/ServerRecords.tsx:73:14
+  71 |   const [method, setMethod] = useState("");
+  72 |   const [from, setFrom] = useState(
+> 73 |     new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10),
+     |              ^^^^^^^^^^ Cannot call impure function
+  74 |   );
+  75 |   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
+  76 |   const [loading, setLoading] = useState(false);  react-hooks/purity
+
+/home/user/Subscription-Management-System/frontend/src/data.ts
+  459:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/home/user/Subscription-Management-System/vite.config.ts
+   9:5   error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  12:11  error  Empty block statement                                                                                                no-empty
+
+✖ 14 problems (14 errors, 0 warnings)
+

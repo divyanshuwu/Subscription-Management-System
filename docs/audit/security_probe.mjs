@@ -1,0 +1,23 @@
+import {createRequire} from 'node:module';
+import {writeFile} from 'node:fs/promises';
+const require=createRequire('/home/user/Subscription-Management-System/package.json');
+const request=require('supertest');
+Object.assign(process.env,{SQLITE_PATH:':memory:',DATABASE_URL:'',NODE_ENV:'test',QUIET:'1',JWT_SECRET:'fresh-audit-isolated-test-secret-not-for-deployment',MAIL_TRANSPORT:'smtp',SMTP_HOST:'127.0.0.1',SMTP_REQUIRE_TLS:'false',SMTP_SECURE:'false'});
+process.chdir('/home/user/audit');
+const {SMTPServer}=require('smtp-server');let received=0;const smtp=new SMTPServer({authOptional:true,disabledCommands:['STARTTLS'],onData(stream,session,done){stream.on('data',()=>{});stream.on('end',()=>{received++;done();});}});await new Promise(r=>smtp.listen(0,'127.0.0.1',r));process.env.SMTP_PORT=String(smtp.server.address().port);
+const root='/home/user/Subscription-Management-System';
+const {app}=await import(root+'/backend/app.mjs');
+const {db}=await import(root+'/backend/db.mjs');
+const {seed}=await import(root+'/backend/seed.mjs');
+await seed();
+const admin=(await request(app).post('/api/auth/login').send({email:'admin@brightloop.local',password:'Brightloop@2026'})).body;
+const staff=(await request(app).post('/api/auth/login').send({email:'staff@brightloop.local',password:'Brightloop@2026'})).body;
+const before=await request(app).post('/api/admin/staff').set('Authorization','Bearer '+staff.access_token).send({name:'Unauthorized user',email:'forbidden@audit.test',password:'StrongAudit@2026'});
+const forgot=await request(app).post('/api/auth/forgot-password').send({email:'admin@brightloop.local'});
+const notices=await request(app).get('/api/notifications?page_size=100').set('Authorization','Bearer '+staff.access_token);
+const item=notices.body.data?.find(x=>x.recipient==='admin@brightloop.local'&&x.body?.includes('#reset='));
+const token=item?.body.match(/#reset=([A-Za-z0-9%]+)/)?.[1];
+let resetStatus=null,newRole=null,oldSession=null;
+if(token){const reset=await request(app).post('/api/auth/reset-password').send({token:decodeURIComponent(token),password:'IsolatedAuditOnly@2026'});resetStatus=reset.status;const login=await request(app).post('/api/auth/login').send({email:'admin@brightloop.local',password:'IsolatedAuditOnly@2026'});newRole=login.body.user?.role;oldSession=(await request(app).get('/api/auth/me').set('Authorization','Bearer '+admin.access_token)).status;}
+const report={fixture:'in-memory isolated seed, controlled SMTP socket, not live account',smtpMessagesReceived:received,staffDirectAdminActionStatus:before.status,forgotStatus:forgot.status,staffNotificationsStatus:notices.status,resetTokenExposedToStaff:!!token,redactedNotification:item?{recipient:item.recipient,subject:item.subject,delivery_status:item.delivery_status,body:'Reset your password within 30 minutes: [APP]/#reset=[REDACTED]'}:null,resetWithLeakedTokenStatus:resetStatus,roleAfterLoginWithReplacedPassword:newRole,originalAdminSessionStatus:oldSession};
+await writeFile('/home/user/audit/logs/security-probe.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));if(token&&resetStatus===200&&newRole==='ADMIN')process.exitCode=1;await db.destroy();await new Promise(r=>smtp.close(r));

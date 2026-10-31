@@ -1,0 +1,88 @@
+{
+  "subscriptions": 10000,
+  "concurrency": 5,
+  "requests_per_endpoint": 50,
+  "page_size": 50,
+  "database": "SQLite WAL",
+  "measured_at": "2026-10-31T08:37:33Z",
+  "results": [
+    {
+      "endpoint": "/subscriptions",
+      "p50_ms": 8.57,
+      "p95_ms": 9.92,
+      "max_ms": 11.02
+    },
+    {
+      "endpoint": "/subscriptions?page=100",
+      "p50_ms": 9.08,
+      "p95_ms": 13.13,
+      "max_ms": 14.73
+    },
+    {
+      "endpoint": "/subscriptions?status=Active",
+      "p50_ms": 37.2,
+      "p95_ms": 39.99,
+      "max_ms": 40.62
+    },
+    {
+      "endpoint": "/invoices",
+      "p50_ms": 6.59,
+      "p95_ms": 8.39,
+      "max_ms": 9.25
+    },
+    {
+      "endpoint": "/invoices/outstanding",
+      "p50_ms": 7.31,
+      "p95_ms": 9.59,
+      "max_ms": 9.78
+    },
+    {
+      "endpoint": "/payments",
+      "p50_ms": 4.2,
+      "p95_ms": 6.17,
+      "max_ms": 6.8
+    },
+    {
+      "endpoint": "/dashboard/summary",
+      "p50_ms": 3.82,
+      "p95_ms": 4.07,
+      "max_ms": 4.48
+    },
+    {
+      "endpoint": "/reports/revenue",
+      "p50_ms": 3.6,
+      "p95_ms": 4.13,
+      "max_ms": 4.58
+    },
+    {
+      "endpoint": "/reports/aging",
+      "p50_ms": 3.16,
+      "p95_ms": 4.88,
+      "max_ms": 4.92
+    },
+    {
+      "endpoint": "/reports/subscriptions",
+      "p50_ms": 6.91,
+      "p95_ms": 14.6,
+      "max_ms": 17.32
+    },
+    {
+      "endpoint": "/reports/invoices",
+      "p50_ms": 4.96,
+      "p95_ms": 7.86,
+      "max_ms": 8.76
+    },
+    {
+      "endpoint": "/reports/payments",
+      "p50_ms": 3.52,
+      "p95_ms": 3.65,
+      "max_ms": 3.96
+    },
+    {
+      "endpoint": "/audit",
+      "p50_ms": 4.84,
+      "p95_ms": 9.47,
+      "max_ms": 11.28
+    }
+  ]
+}

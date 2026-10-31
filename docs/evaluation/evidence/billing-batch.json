@@ -1,0 +1,32 @@
+{
+  "database": "isolated in-memory SQLite, single connection",
+  "due_subscriptions": 500,
+  "concurrent_billing_runs": 2,
+  "invoice_count": 500,
+  "failed_subscriptions": 0,
+  "combined_wall_ms": 692,
+  "runs": [
+    {
+      "id": "75db569b-3ff9-412b-949c-37d1783149a3",
+      "created_at": "2026-10-31T08:39:27.173Z",
+      "status": "Completed",
+      "scanned": 500,
+      "created": 250,
+      "skipped": 0,
+      "failed": 0,
+      "details": [],
+      "finished_at": "2026-10-31T08:39:27.861Z"
+    },
+    {
+      "id": "225ef3d3-21f7-4f19-ba1c-e515c5a9726f",
+      "created_at": "2026-10-31T08:39:27.173Z",
+      "status": "Completed",
+      "scanned": 500,
+      "created": 250,
+      "skipped": 0,
+      "failed": 0,
+      "details": [],
+      "finished_at": "2026-10-31T08:39:27.861Z"
+    }
+  ]
+}

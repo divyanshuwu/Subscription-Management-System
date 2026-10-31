@@ -1,0 +1,10 @@
+REPRODUCED P1: one-year default list filter hides still-active older subscriptions {"stored_status":"Active","list_total":0,"from":"2025-10-31","direct_get":200}
+REPRODUCED P2: valid quote is repriced at conversion after catalog price change {"quote_valid_until":"2026-11-30","template_unit_price":100,"converted_unit_price":200}
+REPRODUCED P3: past service-period discount disappears on later confirmation {"period_start":"2026-09-30","draft_total":100,"confirmed_total":110,"confirmation_date":"2026-10-31"}
+REPRODUCED P4: draft invoices count as overdue receivables {"invoice_status":"Draft","outstanding":100,"overdue_count":1}
+REPRODUCED P5: aging defaults omit debts older than one year {"outstanding":100,"aging_bucket_total":0,"default_from":"2025-10-31","old_due_date":"2024-10-31"}
+REPRODUCED P6: pause/resume discards previously due, unbilled periods {"previous_unbilled_due":"2026-09-30","resumed_next_billing":"2026-10-31","generated_period_starts":["2026-10-31"]}
+REPRODUCED P7: no Draft to Quotation action for a directly-created subscription {"requested_action":"quotation","http_status":404,"message":"Unknown action","available_path":"separate template-based quote conversion only"}
+REPRODUCED P8: positive sub-cent payment accepted but recorded as zero {"requested_amount":0.001,"http_status":201,"recorded_amount":0}
+REPRODUCED P9: monthly and annual clamping permanently shift billing anchor {"monthly_sequence":["2026-01-31","2026-02-28","2026-03-28"],"yearly_sequence":["2024-02-29","2025-02-28","2028-02-28"],"note":"PS does not define anchor policy; risk requires product decision, not automatic non-compliance"}
+REPRODUCED P10: historical revenue summary has no row until explicitly refreshed {"fixture":"direct historical import/missed daily summary, not normal payment API path","materialized_row_count":0,"live_payment_total":100}

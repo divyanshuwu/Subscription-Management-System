@@ -1,0 +1,27 @@
+
+> brightloop-subscription-workspace@0.0.0 test
+> node --test backend/tests/*.test.mjs
+
+✔ M1: server rejects weak password; unique emails are case-insensitive (583.843935ms)
+✔ M1: unauthenticated calls are 401; customer and staff cannot add staff (260.270159ms)
+✔ M1: refresh tokens rotate and cannot be replayed (266.767843ms)
+✔ M2/M3: admin catalog CRUD, variant delta, plan availability, staff mutation 403 (19.912469ms)
+✔ M4: quote conversion is atomic, single-use, and rejects expired quotes (15.752008ms)
+✔ M5: illegal transitions return 409; pause and resume follow state machine (17.594166ms)
+✔ M7: expired and exhausted discounts are skipped; line tax precedes discount (11.484906ms)
+✔ M6: billing twice never duplicates an invoice; billing run scan is logged (10.442135ms)
+✔ M6/M7: confirmation consumes a capped discount exactly once (14.847176ms)
+✔ M8: partial payment stays Confirmed; exact balance transitions to Paid (9.697759ms)
+✔ M8: cancelled invoices, future payments, and overpayment are rejected (7.459537ms)
+✔ M9: server-side customer isolation covers lists, records, PDF and mutations (18.045012ms)
+✔ M6/M11: PDF is generated locally; notifications are idempotent (25.094124ms)
+✔ M10/M11: paginated date-bound reports, summaries and mutation audits (14.933492ms)
+✔ M1: reset tokens are expiring, single-use and password policy is enforced (520.431224ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2096.189133

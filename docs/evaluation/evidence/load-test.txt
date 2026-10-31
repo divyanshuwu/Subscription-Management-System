@@ -1,0 +1,29 @@
+
+> brightloop-subscription-workspace@0.0.0 test:load
+> python3 scripts/load_test.py
+
+Seeded 12 customers, 24 subscriptions, and 28 invoices.
+
+DEMO CREDENTIALS (change before production)
+ADMIN    admin@brightloop.local
+STAFF    staff@brightloop.local
+CUSTOMER customer@brightloop.local
+Password Brightloop@2026
+
+LOAD TEST DATASET: 10000 subscriptions
+
+10,000 subscriptions | 50-row pages | 50 requests/endpoint | concurrency 5
+ENDPOINT                                       p50 ms    p95 ms    max ms  RESULT
+/subscriptions                                   8.57      9.92     11.02  PASS
+/subscriptions?page=100                          9.08     13.13     14.73  PASS
+/subscriptions?status=Active                    37.20     39.99     40.62  PASS
+/invoices                                        6.59      8.39      9.25  PASS
+/invoices/outstanding                            7.31      9.59      9.78  PASS
+/payments                                        4.20      6.17      6.80  PASS
+/dashboard/summary                               3.82      4.07      4.48  PASS
+/reports/revenue                                 3.60      4.13      4.58  PASS
+/reports/aging                                   3.16      4.88      4.92  PASS
+/reports/subscriptions                           6.91     14.60     17.32  PASS
+/reports/invoices                                4.96      7.86      8.76  PASS
+/reports/payments                                3.52      3.65      3.96  PASS
+/audit                                           4.84      9.47     11.28  PASS

@@ -1,0 +1,15 @@
+
+> brightloop-subscription-workspace@0.0.0 test:ui
+> node scripts/ui_test.mjs
+
+PASS Desktop dashboard renders and fits viewport
+PASS Create subscription with customer, plan and terms
+PASS Confirm, activate, pause and resume subscription
+PASS Billing creates invoices and repeat runs skip duplicate periods
+PASS Invoice PDF downloads locally
+PASS Global search opens and finds subscriptions
+PASS Every workspace navigation page renders
+PASS Customer preview hides staff navigation and scopes rows
+MOBILE OVERFLOW { width: 390, scroll: 390, nodes: [] }
+PASS Mobile navigation, layout and dashboard fit 390px
+PASS No browser runtime errors

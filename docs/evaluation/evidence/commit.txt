@@ -1,0 +1,7 @@
+commit f228f3b7a3029d9563e9be8c4dcdf63a6fe39eb7
+Author:     Byte-Craftsman-Alpha <aditya463615@gmail.com>
+AuthorDate: Sat Oct 31 13:38:51 2026 +0530
+Commit:     Byte-Craftsman-Alpha <aditya463615@gmail.com>
+CommitDate: Sat Oct 31 13:38:51 2026 +0530
+
+    initial prototype codebase, need testing and cleanup
