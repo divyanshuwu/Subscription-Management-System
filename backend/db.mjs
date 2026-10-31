@@ -1,5 +1,6 @@
 import "dotenv/config";
 import knex from "knex";
+import { upgrade } from "./migrations.mjs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -37,6 +38,7 @@ export function decode(row) {
   if (!row) return row;
   const r = { ...row };
   for (const k of [
+    "pause_intervals",
     "lines",
     "product_ids",
     "flags",
@@ -72,11 +74,11 @@ export function decode(row) {
   if (r.active != null) r.active = Boolean(r.active);
   return r;
 }
-export function addPeriod(date, frequency, count = 1) {
+export function addPeriod(date, frequency, count = 1, anchor = date) {
   const d = new Date(`${date.slice(0, 10)}T12:00:00Z`);
-  const original = d.getUTCDate();
-  if (frequency === "daily") d.setUTCDate(original + count);
-  else if (frequency === "weekly") d.setUTCDate(original + 7 * count);
+  const original = new Date(`${anchor.slice(0, 10)}T12:00:00Z`).getUTCDate();
+  if (frequency === "daily") d.setUTCDate(d.getUTCDate() + count);
+  else if (frequency === "weekly") d.setUTCDate(d.getUTCDate() + 7 * count);
   else {
     d.setUTCDate(1);
     if (frequency === "yearly") d.setUTCFullYear(d.getUTCFullYear() + count);
@@ -298,4 +300,5 @@ export async function migrate() {
     t.decimal("overdue_amount", 16, 2).defaultTo(0);
     t.string("updated_at");
   });
+  await upgrade(db);
 }

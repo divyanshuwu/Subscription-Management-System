@@ -21,6 +21,7 @@ import {
   email,
   refreshSummary,
   reminders,
+  calculate,
 } from "./services.mjs";
 export const app = express();
 app.disable("x-powered-by");
@@ -51,7 +52,7 @@ const date = z
       new Date(v).toISOString().slice(0, 10) === v,
     "Invalid date",
   );
-const money = z.coerce.number().min(0).max(100000000);
+const money = z.coerce.number().finite().min(0).max(100000000).refine(v => Math.abs(v * 100 - Math.round(v * 100)) < 0.000001, "Use at most two decimal places");
 const flags = z.object({
   auto_close_on_end: z.boolean().default(true),
   allow_early_close: z.boolean().default(true),
@@ -120,13 +121,15 @@ function encode(row) {
     if (out[key] != null) out[key] = JSON.stringify(out[key]);
   return out;
 }
-function bounds(query) {
-  return {
+function bounds(query, operational = false) {
+  const result = {
     from: query.from
       ? date.parse(query.from)
-      : addPeriod(today(), "yearly", -1),
+      : operational ? "0001-01-01" : addPeriod(today(), "yearly", -1),
     to: query.to ? date.parse(query.to) : today(),
   };
+  if (result.from > result.to) fail(400, "Start date must not be after end date");
+  return result;
 }
 async function list(req, table, options = {}) {
   const page = Math.max(1, Math.min(100000, Number(req.query.page) || 1));
@@ -140,7 +143,7 @@ async function list(req, table, options = {}) {
     } else if (req.query.customer_id)
       q.where("customer_id", uuid.parse(req.query.customer_id));
   }
-  const { from, to } = bounds(req.query);
+  const { from, to } = bounds(req.query, true);
   if (from > to) fail(400, "Start date must not be after end date");
   if (table === "payments") q.whereBetween("payment_date", [from, to]);
   else
@@ -159,7 +162,7 @@ async function list(req, table, options = {}) {
   if (req.query.method && table === "payments")
     q.where("method", String(req.query.method));
   if ((req.query.overdue === "true" || options.overdue) && table === "invoices")
-    q.whereNotIn("status", ["Paid", "Cancelled"]).where(
+    q.where("status", "Confirmed").where(
       "due_date",
       "<",
       today(),
@@ -168,7 +171,7 @@ async function list(req, table, options = {}) {
     options.outstanding ||
     (table === "invoices" && req.query.outstanding === "true")
   )
-    q.whereNotIn("status", ["Paid", "Cancelled"]);
+    q.where("status", "Confirmed");
   if (req.query.entity_id && table === "audit")
     q.where("entity_id", String(req.query.entity_id));
   if (req.query.search) {
@@ -452,12 +455,14 @@ async function validatedLines(trx, planId, raw, requireAvailable = true) {
     fail(400, "Lines must include the plan product");
   return { plan, lines };
 }
-async function newSubscription(trx, input, actor, initial = "Draft") {
+async function newSubscription(trx, input, actor, initial = "Draft", frozen = false) {
   const customer = await trx("users")
     .where({ id: input.customer_id, role: "CUSTOMER" })
     .first();
   if (!customer) fail(400, "Select a customer account");
-  const { plan, lines } = await validatedLines(trx, input.plan_id, input.lines);
+  const validated = await validatedLines(trx, input.plan_id, input.lines);
+  const { plan } = validated;
+  const lines = frozen ? input.lines : validated.lines;
   const start = input.start_date || today();
   const expiry = input.expiry_date || addPeriod(start, plan.billing_frequency);
   if (expiry <= start) fail(400, "Expiry must be after start date");
@@ -507,6 +512,8 @@ app.get("/api/subscriptions/:id", async (req, res) => {
         .first(),
     ),
   );
+  row.pricing_preview = { ...await calculate(db, row.lines), effective_date: today() };
+  row.pricing_preview.lines = JSON.parse(row.pricing_preview.lines);
   row.history = (
     await db("audit").where({ entity_id: row.id }).orderBy("created_at")
   ).map(decode);
@@ -526,14 +533,15 @@ app.post("/api/quotations", staff, async (req, res) => {
       .first())
   )
     fail(400, "Customer not found");
-  await validatedLines(db, template.plan_id, template.lines);
+  const priced = await validatedLines(db, template.plan_id, template.lines);
   const row = await db.transaction(async (trx) => {
     const value = {
       id: id(),
       number: await number(trx, "QUO"),
       customer_id: input.customer_id,
       plan_id: template.plan_id,
-      lines: JSON.stringify(template.lines),
+      lines: JSON.stringify(priced.lines),
+      price_snapshot: true,
       valid_until: addPeriod(today(), "daily", template.validity_days),
       status: "Quotation",
       created_at: now(),
@@ -565,11 +573,13 @@ app.post("/api/quotations/:id/convert", staff, async (req, res) => {
       fail(409, "Quotation is already converted");
     if (quote.valid_until < today())
       fail(409, "Expired quotations cannot be converted");
+    if (!quote.price_snapshot) fail(409, "Legacy quote requires an explicit re-quote before conversion");
     const sub = await newSubscription(
       trx,
       { ...quote, start_date: today() },
       req.user.sub,
       "Quotation",
+      true,
     );
     const changed = await trx("quotations")
       .where({ id: quote.id, status: "Quotation" })
@@ -590,6 +600,7 @@ async function transition(req, res) {
     const s = scope(req, decode(await q.first()));
     const plan = decode(await trx("plans").where({ id: s.plan_id }).first());
     const allowed = {
+      quotation: ["Draft"],
       confirm: ["Draft", "Quotation"],
       activate: ["Confirmed"],
       pause: ["Active"],
@@ -621,6 +632,7 @@ async function transition(req, res) {
     if (["confirm", "activate"].includes(action))
       await validatedLines(trx, plan.id, s.lines);
     const status = {
+      quotation: "Quotation",
       confirm: "Confirmed",
       activate: "Active",
       pause: "Paused",
@@ -635,10 +647,18 @@ async function transition(req, res) {
         s.expiry_date > today() ? s.expiry_date : today(),
         plan.billing_frequency,
       );
-      if (s.status === "Closed") update.next_billing_date = today();
+      if (s.status === "Closed") {
+        // Old accrued service is billed before a closed term can be restarted.
+        if (s.bill_until && s.next_billing_date < s.bill_until) fail(409, "Run billing to settle accrued periods before renewal");
+        update.next_billing_date = today(); update.start_date = today(); update.bill_until = null; update.paused_at = null;
+      }
     }
-    if (action === "resume" && s.next_billing_date < today())
-      update.next_billing_date = today();
+    if (action === "pause") update.paused_at = today();
+    if (action === "resume") {
+      update.pause_intervals = JSON.stringify([...(s.pause_intervals || []), {start:s.paused_at || today(), end:today()}]);
+      update.paused_at = null;
+    }
+    if (action === "close") update.bill_until = today();
     if (action === "activate" && s.expiry_date <= today())
       fail(409, "Renew the term before activation");
     await trx("subscriptions").where({ id: s.id }).update(update);
@@ -811,7 +831,7 @@ app.get("/api/portal/overview", async (req, res) => {
       .first(),
     db("invoices")
       .where({ customer_id: req.user.sub })
-      .whereNotIn("status", ["Paid", "Cancelled"])
+      .where("status", "Confirmed")
       .sum("total as t")
       .sum("paid_amount as p")
       .first(),
@@ -847,14 +867,12 @@ app.post("/api/portal/subscriptions/:id/:action", async (req, res) => {
 });
 app.get("/api/dashboard/summary", staff, async (req, res) => {
   const { from, to } = bounds(req.query);
-  const summary =
-    (await db("daily_summary").orderBy("date", "desc").first()) ||
-    (await refreshSummary());
+  const summary = await refreshSummary();
   const rev = await db("payments")
     .whereBetween("payment_date", [from, to])
     .sum("amount as n")
     .first();
-  const open = await db("invoices").whereNotIn("status", ["Paid", "Cancelled"]).count("* as n").first();
+  const open = await db("invoices").where("status", "Confirmed").count("* as n").first();
   res.json({ ...decode(summary), outstanding_count: Number(open.n), revenue_collected: round(rev.n || 0), from, to });
 });
 for (const table of ["subscriptions", "invoices", "payments"])
@@ -862,27 +880,17 @@ for (const table of ["subscriptions", "invoices", "payments"])
     res.json(await list(req, table)),
   );
 app.get("/api/reports/revenue", staff, async (req, res) => {
-  const { from, to } = bounds(req.query);
-  const page = Math.max(1, Number(req.query.page) || 1);
-  const size = Math.min(100, Math.max(1, Number(req.query.page_size) || 50));
-  const query = db("daily_summary").whereBetween("date", [from, to]);
-  const count = await query.clone().count("* as n").first();
-  res.json({
-    data: await query
-      .orderBy("date")
-      .limit(size)
-      .offset((page - 1) * size),
-    total: Number(count.n),
-    page,
-    page_size: size,
-    from,
-    to,
-  });
+  const {from,to} = bounds(req.query);
+  const page = Math.max(1, Number(req.query.page) || 1), size = Math.min(100, Math.max(1, Number(req.query.page_size) || 50));
+  const q = db("payments").whereBetween("payment_date", [from,to]).groupBy("payment_date");
+  const count = await db("payments").whereBetween("payment_date",[from,to]).countDistinct("payment_date as n").first();
+  const data = await q.select("payment_date as date").sum("amount as revenue").orderBy("payment_date").limit(size).offset((page-1)*size);
+  res.json({data:data.map(decode),total:Number(count.n),page,page_size:size,from,to});
 });
 app.get("/api/reports/aging", staff, async (req, res) => {
-  const { from, to } = bounds(req.query);
+  const { from, to } = bounds(req.query, true);
   const rows = await db("invoices")
-    .whereNotIn("status", ["Paid", "Cancelled"])
+    .where("status", "Confirmed")
     .whereBetween("due_date", [from, to]);
   const buckets = [
     { label: "0–30 days", amount: 0, count: 0 },

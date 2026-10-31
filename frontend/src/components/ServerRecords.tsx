@@ -69,9 +69,7 @@ export function ServerRecords({
   const [customerId, setCustomerId] = useState("");
   const [planId, setPlanId] = useState("");
   const [method, setMethod] = useState("");
-  const [from, setFrom] = useState(
-    new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10),
-  );
+  const [from, setFrom] = useState("");
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
   const [reload, setReload] = useState(0);
@@ -85,8 +83,8 @@ export function ServerRecords({
         const params = new URLSearchParams({
           page: String(page),
           page_size: "50",
-          from,
-          to,
+          ...(from ? {from} : {}),
+          ...(to ? {to} : {}),
         });
         if (search) params.set("search", search);
         if (status === "Overdue") params.set("overdue", "true");

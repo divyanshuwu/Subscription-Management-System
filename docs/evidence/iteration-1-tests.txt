@@ -1,0 +1,40 @@
+
+> brightloop-subscription-workspace@0.0.0 test
+> node --test backend/tests/*.test.mjs
+
+✔ regression: old active subscriptions and catalog records remain visible (49.097183ms)
+✔ regression: quotation price remains frozen across catalog edits (30.681647ms)
+✔ regression: confirmation preserves historical tax and discount snapshot (14.846033ms)
+✔ regression: pause/resume retains accrued unbilled periods (22.751838ms)
+✔ paused intervals skip only periods starting inside the pause and retain anchor (13.629578ms)
+✔ closing preserves previously accrued charges (15.962848ms)
+✔ regression: draft debt excluded and old confirmed debt reconciles with aging (17.393167ms)
+✔ regression: sub-cent payments rejected before creating zero-value entries (7.300771ms)
+✔ regression: full Draft to Quotation to Confirmed to Active sequence (36.943353ms)
+✔ billing anchors recover month-end and leap-year anniversaries (1.775325ms)
+✔ regression: historical revenue is independent of materialized summaries (4.505251ms)
+✔ versioned migration is repeatable and retains existing records (3.912165ms)
+✔ parallel confirmation never overspends final discount capacity (3.330212ms)
+✔ M1: server rejects weak password; unique emails are case-insensitive (589.890198ms)
+✔ M1: unauthenticated calls are 401; customer and staff cannot add staff (263.438026ms)
+✔ M1: refresh tokens rotate and cannot be replayed (265.641173ms)
+✔ M2/M3: admin catalog CRUD, variant delta, plan availability, staff mutation 403 (19.343375ms)
+✔ M4: quote conversion is atomic, single-use, and rejects expired quotes (15.850069ms)
+✔ M5: illegal transitions return 409; pause and resume follow state machine (17.526879ms)
+✔ M7: expired and exhausted discounts are skipped; line tax precedes discount (11.302511ms)
+✔ M6: billing twice never duplicates an invoice; billing run scan is logged (19.119218ms)
+✔ M6/M7: confirmation consumes a capped discount exactly once (8.53348ms)
+✔ M8: partial payment stays Confirmed; exact balance transitions to Paid (20.103983ms)
+✔ M8: cancelled invoices, future payments, and overpayment are rejected (6.386429ms)
+✔ M9: server-side customer isolation covers lists, records, PDF and mutations (9.865507ms)
+✔ M6/M11: PDF is generated locally; notifications are idempotent (23.705928ms)
+✔ M10/M11: paginated date-bound reports, summaries and mutation audits (15.268177ms)
+✔ M1: reset tokens are expiring, single-use and password policy is enforced (535.936939ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2647.516862

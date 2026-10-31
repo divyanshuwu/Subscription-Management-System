@@ -126,12 +126,12 @@ export async function refreshSummary(date = today()) {
     db("subscriptions").where({ status: "Active" }).count("* as n").first(),
     db("payments").where("payment_date", date).sum("amount as n").first(),
     db("invoices")
-      .whereNotIn("status", ["Paid", "Cancelled"])
+      .where("status", "Confirmed")
       .sum("total as total")
       .sum("paid_amount as paid")
       .first(),
     db("invoices")
-      .whereNotIn("status", ["Paid", "Cancelled"])
+      .where("status", "Confirmed")
       .where("due_date", "<", date)
       .count("* as count")
       .sum("total as total")
@@ -171,7 +171,7 @@ export async function runBilling(actor = "system") {
   const date = today();
   while (true) {
     const batch = await db("subscriptions")
-      .where({ status: "Active" })
+      .where(function () { this.whereIn("status", ["Active", "Paused"]).orWhere(function () { this.where("status", "Closed").whereNotNull("bill_until"); }); })
       .where("next_billing_date", "<=", date)
       .where("id", ">", cursor)
       .orderBy("id")
@@ -191,8 +191,9 @@ export async function runBilling(actor = "system") {
             const plan = decode(
               await trx("plans").where({ id: s.plan_id }).first(),
             );
-            if (s.status !== "Active" || s.next_billing_date > date)
-              return "done";
+            if (s.next_billing_date > date) return "done";
+            if (s.status === "Closed" && (!s.bill_until || s.next_billing_date >= s.bill_until)) return "done";
+            if (s.status === "Paused" && s.next_billing_date >= (s.paused_at || date)) return "done";
             if (
               s.next_billing_date >= s.expiry_date &&
               plan.flags.auto_close_on_end
@@ -206,7 +207,13 @@ export async function runBilling(actor = "system") {
               return "done";
             }
             const start = s.next_billing_date;
-            const end = addPeriod(start, plan.billing_frequency);
+            const end = addPeriod(start, plan.billing_frequency, 1, s.start_date);
+            // Full anchored periods starting during a completed pause are not charged.
+            if ((s.pause_intervals || []).some(p => start >= p.start && start < p.end)) {
+              await trx("subscriptions").where({id:s.id}).update({next_billing_date:end});
+              await audit(trx, "subscription", s.id, actor, "paused_period_skipped", null, {period_start:start,period_end:end});
+              return "skipped";
+            }
             const exists = await trx("invoices")
               .where({ subscription_id: s.id, period_start: start })
               .first();
@@ -311,19 +318,20 @@ export async function confirmInvoice(invoiceId, actor) {
       throw Object.assign(new Error("Only draft invoices can be confirmed"), {
         status: 409,
       });
-    const calc = await calculate(trx, i.lines, today());
-    const discounts = JSON.parse(calc.applied_discounts);
+    // Confirmation approves the draft snapshot; it never silently reprices it.
+    const discounts = i.applied_discounts || [];
     for (const d of discounts) {
       const rule = await trx("discounts").where({ id: d.id }).first();
       const changed = await trx("discounts")
         .where({ id: d.id })
         .modify((q) => {
-          if (rule.max_uses != null) q.where("used_count", "<", rule.max_uses);
+          if (!rule) q.whereRaw("1 = 0");
+          else if (rule.max_uses != null) q.where("used_count", "<", rule.max_uses);
         })
         .increment("used_count", 1);
       if (!changed)
         throw Object.assign(
-          new Error("Discount capacity changed; retry confirmation"),
+          new Error("Discount allowance exhausted; cancel and regenerate an explicit revised draft"),
           { status: 409 },
         );
       await audit(
@@ -337,8 +345,7 @@ export async function confirmInvoice(invoiceId, actor) {
       );
     }
     const update = {
-      ...calc,
-      status: Number(calc.total) === 0 ? "Paid" : "Confirmed",
+      status: Number(i.total) === 0 ? "Paid" : "Confirmed",
     };
     await trx("invoices").where({ id: invoiceId }).update(update);
     await audit(trx, "invoice", invoiceId, actor, "confirmed", i, update);
@@ -424,7 +431,7 @@ export async function reminders() {
     );
   }
   const invoices = await db("invoices")
-    .whereNotIn("status", ["Paid", "Cancelled"])
+    .where("status", "Confirmed")
     .where("due_date", "<", date);
   const staff = await db("users").whereIn("role", ["STAFF", "ADMIN"]);
   for (const i of invoices) {
