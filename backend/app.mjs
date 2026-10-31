@@ -22,6 +22,7 @@ import {
   refreshSummary,
   reminders,
   calculate,
+  deliverOutbox,
 } from "./services.mjs";
 export const app = express();
 app.disable("x-powered-by");
@@ -512,6 +513,8 @@ app.get("/api/subscriptions/:id", async (req, res) => {
         .first(),
     ),
   );
+  row.plan = decode(await db("plans").where({id:row.plan_id}).first());
+  row.customer = await db("users").where({id:row.customer_id}).select("id","name","company","email").first();
   row.pricing_preview = { ...await calculate(db, row.lines), effective_date: today() };
   row.pricing_preview.lines = JSON.parse(row.pricing_preview.lines);
   row.history = (
@@ -592,6 +595,64 @@ app.post("/api/quotations/:id/convert", staff, async (req, res) => {
   });
   res.status(201).json(row);
 });
+// Subscription amendments are prospective: never rewrite already invoiced service.
+async function amendSubscription(req,res) {
+  const customer = req.user.role === "CUSTOMER";
+  const input = z.object({lines:z.array(lineSchema).min(1).max(100),expected_revision:z.number().int().min(0),
+    ...(customer ? {} : {expiry_date:date.optional(),payment_terms:z.number().int().min(0).max(365).optional()})}).strict().parse(req.body);
+  const result = await db.transaction(async trx => {
+    let query=trx("subscriptions").where({id:uuid.parse(req.params.id)});
+    if(process.env.DATABASE_URL)query=query.forUpdate();
+    const s=scope(req,decode(await query.first()));
+    if(s.status==="Closed")fail(409,"Renew the subscription before editing");
+    if(s.revision!==input.expected_revision)fail(409,"Subscription changed; reload before editing");
+    const {plan,lines}=await validatedLines(trx,s.plan_id,input.lines,false);
+    // Retain agreed unit prices for unchanged products/variant selections.
+    for(const line of lines){
+      const old=s.lines.find(l=>l.product_id===line.product_id && [...(l.variant_ids||[])].sort().join() === [...line.variant_ids].sort().join());
+      if(old)line.unit_price=old.unit_price;
+    }
+    let effective=s.next_billing_date;
+    if(["Active","Paused"].includes(s.status)) while(effective<=today())effective=addPeriod(effective,plan.billing_frequency,1,s.start_date);
+    const update={revision:s.revision+1};
+    if(["Draft","Quotation","Confirmed"].includes(s.status))update.lines=JSON.stringify(lines);
+    else {update.pending_lines=JSON.stringify(lines);update.pending_effective_date=effective;}
+    if(input.expiry_date){if(input.expiry_date<=today() || input.expiry_date<=s.start_date)fail(400,"Expiry must follow today and the start date");update.expiry_date=input.expiry_date;}
+    if(input.payment_terms!=null)update.payment_terms=input.payment_terms;
+    await trx("subscriptions").where({id:s.id}).update(update);
+    await audit(trx,"subscription",s.id,req.user.sub,"amended",s,update);
+    return decode({...s,...update});
+  });
+  res.json(result);
+}
+app.put("/api/subscriptions/:id",staff,amendSubscription);
+app.put("/api/portal/subscriptions/:id",async(req,res)=>{if(req.user.role!=="CUSTOMER")fail(403,"Customer required");await amendSubscription(req,res);});
+// Customer-safe catalog for owned-plan add-on management. Cost/notes are not exposed.
+app.get("/api/portal/catalog",async(req,res)=>{
+  if(req.user.role!=="CUSTOMER")fail(403,"Customer required");
+  const page=Math.max(1,Number(req.query.page)||1),size=50;
+  const q=db("products").where({active:true});
+  if(req.query.search)q.where("name","like",`%${String(req.query.search).slice(0,100)}%`);
+  const count=await q.clone().count("* as n").first();
+  const rows=await q.select("id","name","sales_price","type").orderBy("name").limit(size).offset((page-1)*size);
+  res.json({data:rows.map(decode),total:Number(count.n),page,page_size:size});
+});
+app.get("/api/search",async(req,res)=>{
+  const term=String(req.query.search||"").trim().slice(0,100);
+  if(term.length<2)return res.json({subscriptions:[],invoices:[],customers:[]});
+  const query={...req.query,page:"1",page_size:"10",search:term};
+  const request={user:req.user,query};
+  const [subscriptions,invoices,customers]=await Promise.all([list(request,"subscriptions"),list(request,"invoices"),req.user.role==="CUSTOMER"?Promise.resolve({data:[]}):list(request,"users",{role:"CUSTOMER"})]);
+  res.json({subscriptions:subscriptions.data,invoices:invoices.data,customers:customers.data});
+});
+app.get("/api/renewals/upcoming",async(req,res)=>{
+  const q=db("subscriptions").whereIn("status",["Active","Paused"]).where("expiry_date",">=",today());
+  if(req.user.role==="CUSTOMER")q.where({customer_id:req.user.sub});
+  const rows=(await q.orderBy("expiry_date").limit(4)).map(decode);
+  const customers=await db("users").whereIn("id",rows.map(s=>s.customer_id)).select("id","name","company","email");
+  res.json({data:rows.map(s=>({...s,customer:customers.find(c=>c.id===s.customer_id)}))});
+});
+app.post("/api/notifications/retry",staff,async(req,res)=>res.json(await deliverOutbox()));
 async function transition(req, res) {
   const action = req.params.action;
   const result = await db.transaction(async (trx) => {
@@ -747,7 +808,8 @@ app.post("/api/invoices/:id/:action", staff, async (req, res) => {
       `invoice:${invoice.id}`,
       user.email,
       `Your Brightloop invoice ${invoice.number}`,
-      `Invoice total: $${invoice.total}. Due ${invoice.due_date}. Local PDF: ${pdf}`,
+      `Invoice total: $${invoice.total}. Due ${invoice.due_date}. Your invoice PDF is attached.`,
+      [{filename:`${invoice.number}.pdf`,path:pdf,contentType:"application/pdf"}],
     );
     if (sent)
       await audit(db, "invoice", invoice.id, req.user.sub, "sent", null, {
@@ -757,8 +819,8 @@ app.post("/api/invoices/:id/:action", staff, async (req, res) => {
     return res.json({
       sent,
       message: sent
-        ? "Invoice written to local outbox"
-        : "Already sent; duplicate notification suppressed",
+        ? "Invoice queued for delivery (check notification status)"
+        : "Already queued; duplicate notification suppressed",
     });
   }
   fail(404, "Unknown action");
@@ -840,7 +902,10 @@ app.get("/api/portal/overview", async (req, res) => {
       .sum("amount as n")
       .first(),
   ]);
+  const active=await db("subscriptions").where({customer_id:req.user.sub,status:"Active"}).count("* as n").first();
+  const overdue=await db("invoices").where({customer_id:req.user.sub,status:"Confirmed"}).where("due_date","<",today()).count("* as n").sum("total as t").sum("paid_amount as p").first();
   res.json({
+    active_subscriptions:Number(active.n),overdue_count:Number(overdue.n),overdue_amount:round(Number(overdue.t||0)-Number(overdue.p||0)),
     subscriptions: Number(s.n),
     outstanding: round(Number(i.t || 0) - Number(i.p || 0)),
     revenue_collected: Number(p.n || 0),

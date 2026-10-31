@@ -1,4 +1,4 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
 import path from "node:path";
 import PDFDocument from "pdfkit";
@@ -13,25 +13,8 @@ import {
   number,
   audit,
 } from "./db.mjs";
-export async function email(key, recipient, subject, body) {
-  const row = { id: id(), key, recipient, subject, body, created_at: now() };
-  const inserted = await db("notifications")
-    .insert(row)
-    .onConflict("key")
-    .ignore()
-    .returning("id");
-  if (!inserted.length) return false;
-  const line = `[${row.created_at}] TO: ${recipient}\nSUBJECT: ${subject}\n${body}\n---\n`;
-  await mkdir("backend/data", { recursive: true });
-  await appendFile("backend/data/outbox.log", line);
-  await audit(db, "notification", row.id, "system", "queued", null, {
-    recipient,
-    subject,
-    key,
-  });
-  if (process.env.QUIET !== "1") console.log(line);
-  return true;
-}
+export { email, deliverOutbox } from "./mailer.mjs";
+import { email } from "./mailer.mjs";
 export async function calculate(trx, lines, date = today()) {
   const taxes = (await trx("taxes").where({ active: true })).map(decode);
   const discounts = (await trx("discounts").where({ active: true })).map(
@@ -242,8 +225,11 @@ export async function runBilling(actor = "system") {
               due_date: addPeriod(start, "daily", s.payment_terms),
               status: "Draft",
               paid_amount: 0,
-              ...(await calculate(trx, s.lines, start)),
+              ...(await calculate(trx, s.pending_lines && start >= s.pending_effective_date ? s.pending_lines : s.lines, start)),
             };
+            if (s.pending_lines && start >= s.pending_effective_date) {
+              await trx("subscriptions").where({id:s.id}).update({lines:JSON.stringify(s.pending_lines),pending_lines:null,pending_effective_date:null});
+            }
             await trx("invoices").insert(invoice);
             await trx("subscriptions")
               .where({ id: s.id })

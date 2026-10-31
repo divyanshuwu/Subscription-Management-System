@@ -35,7 +35,38 @@ try {
  await check('Billing and invoice confirmation round-trip through REST', async () => { await page.locator('.nav-item').filter({ hasText: 'Invoices' }).click(); await page.getByRole('button', { name: 'Run billing', exact: true }).click(); await page.getByRole('heading', { name: 'Billing, taken care of.' }).waitFor(); await page.getByRole('button', { name: 'Close dialog' }).click(); invoice = await db('invoices').where({ subscription_id: subscription.id }).first(); assert.ok(invoice); await page.getByText(invoice.number, { exact: true }).click(); await page.getByRole('button', { name: 'Confirm invoice', exact: true }).click(); await page.getByRole('button', { name: 'Send invoice', exact: true }).waitFor(); assert.equal((await db('invoices').where({ id: invoice.id }).first()).status, 'Confirmed'); });
  await check('Record payment updates the real invoice to Paid', async () => { await page.locator('.detail-actions').getByRole('button', { name: 'Record payment', exact: true }).click(); await page.locator('.modal').getByRole('button', { name: 'Record payment', exact: true }).click(); await page.getByText('Payment recorded and invoice balance updated.', { exact: true }).waitFor(); assert.equal((await db('invoices').where({ id: invoice.id }).first()).status, 'Paid'); const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Download PDF', exact: true }).click(); assert.ok((await download).suggestedFilename().endsWith('.pdf')); await page.getByRole('button', { name: 'Close details' }).click(); });
  await check('Advanced product editor performs authenticated PUT', async () => { await page.locator('.nav-item').filter({ hasText: 'Products & plans' }).click(); await page.getByRole('button', { name: 'Advanced setup', exact: true }).click(); const product = await db('products').where({ name: 'Brightloop Workspace' }).first(); await page.locator('.editor-modal .form-grid select').nth(1).selectOption(product.id); await page.getByRole('spinbutton', { name: 'Sales price (USD)', exact: true }).fill('55'); await page.getByRole('button', { name: 'Save changes', exact: true }).click(); await page.getByText('Products updated successfully.', { exact: true }).waitFor(); assert.equal(Number((await db('products').where({ id: product.id }).first()).sales_price), 55); });
+ await check('Contract editor preserves layout and writes a prospective amendment', async () => {
+   await page.locator('.nav-item').filter({hasText:'Subscriptions'}).click();
+   await page.getByText(subscription.number,{exact:true}).click();
+   await page.getByRole('button',{name:'Edit subscription',exact:true}).click();
+   await page.getByRole('spinbutton',{name:'Payment terms (days)',exact:true}).fill('30');
+   const expiry=new Date();expiry.setUTCFullYear(expiry.getUTCFullYear()+1);
+   await page.getByLabel('Term expires',{exact:true}).fill(expiry.toISOString().slice(0,10));
+   await page.getByRole('button',{name:'Save subscription changes',exact:true}).click();
+   await page.getByText('Subscription updated. Active line changes apply at the next future billing boundary.',{exact:true}).waitFor();
+   const saved=await db('subscriptions').where({id:subscription.id}).first();assert.equal(saved.payment_terms,30);assert.equal(saved.revision,1);
+ });
+ await check('Server-backed customer picker finds customer beyond first 100', async () => {
+   const {id,now}=await import('../backend/db.mjs');
+   const distant={id:id(),name:'Beyond Cache Customer',company:'Zebra Beyond Cache',email:'beyond-cache@test.local',password_hash:'unused',role:'CUSTOMER',created_at:'2020-01-01T00:00:00Z'};
+   await db('users').insert(Array.from({length:105},(_,i)=>({id:id(),name:`Paged ${i}`,email:`paged-${i}@test.local`,password_hash:'unused',role:'CUSTOMER',created_at:now()})));
+   await db('users').insert(distant);
+   await page.getByRole('button',{name:'New subscription',exact:true}).click();
+   await page.getByRole('textbox',{name:'Search customer',exact:true}).fill('beyond-cache');
+   await page.locator('select[name=customer_id] option').filter({hasText:'beyond-cache@test.local'}).waitFor({state:'attached'});
+   await page.locator('select[name=customer_id]').selectOption(distant.id);
+   await page.getByRole('button',{name:'Close dialog',exact:true}).click();
+ });
  await check('Customer login receives only owned server-paginated records', async () => { await page.getByRole('button', { name: 'Open account menu' }).click(); await page.getByRole('button', { name: 'Sign out', exact: true }).click(); await page.locator('input[name=email]').fill('customer@brightloop.local'); await page.getByRole('button', { name: 'Sign in to Brightloop' }).click(); await page.getByRole('heading', { name: 'Your subscriptions, simplified.' }).waitFor(); await page.locator('.nav-item').filter({ hasText: 'Subscriptions' }).click(); await page.locator('.server-records tbody tr').first().waitFor(); const names = await page.locator('.server-records tbody tr td:nth-child(2)').allTextContents(); assert.ok(names.every(n => n === customer.company)); assert.equal(await page.locator('.nav-item').filter({ hasText: 'Customers' }).count(), 0); });
+ await check('Customer can edit owned quantity without staff-only contract controls', async () => {
+   await page.getByText(subscription.number,{exact:true}).click();
+   await page.getByRole('button',{name:'Edit subscription',exact:true}).click();
+   assert.equal(await page.getByLabel('Payment terms (days)',{exact:true}).count(),0);
+   await page.getByRole('spinbutton',{name:/Quantity for/}).first().fill('2');
+   await page.getByRole('button',{name:'Save subscription changes',exact:true}).click();
+   await page.getByText('Subscription updated. Active line changes apply at the next future billing boundary.',{exact:true}).waitFor();
+   const saved=await db('subscriptions').where({id:subscription.id}).first();assert.equal(JSON.parse(saved.pending_lines)[0].quantity,2);assert.equal(saved.revision,2);
+ });
  assert.deepEqual(errors, []);
  await writeFile('scripts/local-ui-results.json', JSON.stringify({ passed: checks.length, checks, errors }, null, 2));
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); await new Promise(resolve => apiServer.close(resolve)); await db.destroy(); }

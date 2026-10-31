@@ -3,15 +3,18 @@ import cron from "node-cron";
 import { app } from "./app.mjs";
 import { migrate, db } from "./db.mjs";
 import { secret } from "./auth.mjs";
-import { runBilling, refreshSummary, reminders } from "./services.mjs";
+import { runBilling, refreshSummary, reminders, deliverOutbox } from "./services.mjs";
 secret();
 await migrate();
 await refreshSummary();
-const server = app.listen(Number(process.env.PORT || 4000), "127.0.0.1", () =>
+const server = app.listen(Number(process.env.PORT || 4000), process.env.HOST || "127.0.0.1", () =>
   console.log(
     `Brightloop API listening locally on port ${process.env.PORT || 4000}`,
   ),
 );
+// Durable outbox is independent of the daily billing schedule.
+const mailWorker = setInterval(() => deliverOutbox().catch(console.error), 30000);
+mailWorker.unref();
 let running = false;
 if (process.env.SCHEDULER !== "off")
   cron.schedule(
@@ -34,6 +37,7 @@ if (process.env.SCHEDULER !== "off")
 for (const signal of ["SIGINT", "SIGTERM"])
   process.on(signal, () =>
     server.close(async () => {
+      clearInterval(mailWorker);
       await db.destroy();
       process.exit(0);
     }),

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import knex from "knex";
+import Decimal from "decimal.js";
 import { upgrade } from "./migrations.mjs";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -32,13 +33,14 @@ export const db = knex(
 export const id = () => randomUUID();
 export const today = () => new Date().toISOString().slice(0, 10);
 export const now = () => new Date().toISOString();
-export const round = (v) =>
-  Math.round((Number(v) + Number.EPSILON) * 100) / 100;
+export const round = (v) => new Decimal(v).toDecimalPlaces(2, Decimal.ROUND_HALF_UP).toNumber();
 export function decode(row) {
   if (!row) return row;
   const r = { ...row };
   for (const k of [
     "pause_intervals",
+    "pending_lines",
+    "attachments",
     "lines",
     "product_ids",
     "flags",

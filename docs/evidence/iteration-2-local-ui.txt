@@ -1,0 +1,44 @@
+
+> brightloop-subscription-workspace@0.0.0 test:local-ui
+> node scripts/run_local_ui.mjs
+
+vite v7.3.6 building client environment for production...
+transforming...
+✓ 2397 modules transformed.
+rendering chunks...
+computing gzip size...
+dist-api/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+dist-api/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+dist-api/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.75 kB
+dist-api/assets/inter-greek-wght-normal-CkhJZR-_.woff2          19.00 kB
+dist-api/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+dist-api/index.html                                             30.24 kB │ gzip:   9.25 kB
+dist-api/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.26 kB
+dist-api/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.07 kB
+dist-api/assets/index-CaJVOJ8e.css                              65.08 kB │ gzip:  14.99 kB
+dist-api/assets/react-vendor-Bv07Qh6I.js                         3.97 kB │ gzip:   1.44 kB
+dist-api/assets/purify.es-18JuyMri.js                           30.12 kB │ gzip:  11.51 kB
+dist-api/assets/motion-BVh588zV.js                             134.24 kB │ gzip:  44.51 kB
+dist-api/assets/index.es-Dt7Iojs0.js                           159.01 kB │ gzip:  53.09 kB
+dist-api/assets/html2canvas.esm-DXEQVQnt.js                    201.04 kB │ gzip:  47.43 kB
+dist-api/assets/index-CGQAT0YV.js                              317.05 kB │ gzip:  95.84 kB
+dist-api/assets/jspdf.es.min-C4eQNY5d.js                       386.28 kB │ gzip: 126.44 kB
+✓ built in 4.95s
+Seeded 12 customers, 24 subscriptions, and 31 invoices.
+
+DEMO CREDENTIALS (change before production)
+ADMIN    admin@brightloop.local
+STAFF    staff@brightloop.local
+CUSTOMER customer@brightloop.local
+Password Brightloop@2026
+
+PASS LOCAL API JWT login connects the real local API
+PASS LOCAL API Subscription form writes to SQLite through REST
+PASS LOCAL API Server-enforced confirm and activate work in the drawer
+PASS LOCAL API Billing and invoice confirmation round-trip through REST
+PASS LOCAL API Record payment updates the real invoice to Paid
+PASS LOCAL API Advanced product editor performs authenticated PUT
+PASS LOCAL API Contract editor preserves layout and writes a prospective amendment
+PASS LOCAL API Server-backed customer picker finds customer beyond first 100
+PASS LOCAL API Customer login receives only owned server-paginated records
+PASS LOCAL API Customer can edit owned quantity without staff-only contract controls

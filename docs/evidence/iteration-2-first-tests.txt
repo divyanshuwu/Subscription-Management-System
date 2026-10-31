@@ -1,0 +1,60 @@
+
+> brightloop-subscription-workspace@0.0.0 test
+> node --test backend/tests/*.test.mjs
+
+✔ regression: old active subscriptions and catalog records remain visible (63.30879ms)
+✔ regression: quotation price remains frozen across catalog edits (35.283486ms)
+✔ regression: confirmation preserves historical tax and discount snapshot (16.116692ms)
+✔ regression: pause/resume retains accrued unbilled periods (39.255021ms)
+✔ paused intervals skip only periods starting inside the pause and retain anchor (13.09784ms)
+✔ closing preserves previously accrued charges (22.276921ms)
+✔ regression: draft debt excluded and old confirmed debt reconciles with aging (15.968679ms)
+✔ regression: sub-cent payments rejected before creating zero-value entries (6.718018ms)
+✔ regression: full Draft to Quotation to Confirmed to Active sequence (13.003784ms)
+✔ billing anchors recover month-end and leap-year anniversaries (2.05187ms)
+✔ regression: historical revenue is independent of materialized summaries (5.690333ms)
+✖ versioned migration is repeatable and retains existing records (6.021515ms)
+✔ parallel confirmation never overspends final discount capacity (5.293392ms)
+✔ M1: server rejects weak password; unique emails are case-insensitive (606.594812ms)
+✔ M1: unauthenticated calls are 401; customer and staff cannot add staff (268.639528ms)
+✔ M1: refresh tokens rotate and cannot be replayed (266.095517ms)
+✔ M2/M3: admin catalog CRUD, variant delta, plan availability, staff mutation 403 (33.84381ms)
+✔ M4: quote conversion is atomic, single-use, and rejects expired quotes (31.019263ms)
+✔ M5: illegal transitions return 409; pause and resume follow state machine (21.120471ms)
+✔ M7: expired and exhausted discounts are skipped; line tax precedes discount (14.180591ms)
+✔ M6: billing twice never duplicates an invoice; billing run scan is logged (12.088742ms)
+✔ M6/M7: confirmation consumes a capped discount exactly once (8.97275ms)
+✔ M8: partial payment stays Confirmed; exact balance transitions to Paid (10.225714ms)
+✔ M8: cancelled invoices, future payments, and overpayment are rejected (8.25153ms)
+✔ M9: server-side customer isolation covers lists, records, PDF and mutations (15.892477ms)
+✔ M6/M11: PDF is generated locally; notifications are idempotent (35.75553ms)
+✔ M10/M11: paginated date-bound reports, summaries and mutation audits (19.866463ms)
+✔ M1: reset tokens are expiring, single-use and password policy is enforced (532.054512ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 27
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2818.672327
+
+✖ failing tests:
+
+test at backend/tests/hardening.test.mjs:34:1
+✖ versioned migration is repeatable and retains existing records (6.021515ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  2 !== 1
+  
+      at TestContext.<anonymous> (file:///home/user/Subscription-Management-System/backend/tests/hardening.test.mjs:34:186)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

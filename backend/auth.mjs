@@ -36,7 +36,7 @@ const publicUser = (u) => ({
 export function fail(status, message) {
   throw Object.assign(new Error(message), { status });
 }
-export function auth(req, res, next) {
+export async function auth(req, res, next) {
   try {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token)
@@ -46,6 +46,9 @@ export function auth(req, res, next) {
       issuer: "brightloop",
       audience: "brightloop-local",
     });
+    const current = await db("users").where({id:req.user.sub}).select("role", "token_version").first();
+    if (!current || current.role !== req.user.role || current.token_version !== (req.user.ver || 0))
+      return res.status(401).json({error:"Session revoked; please sign in again"});
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired access token" });
@@ -76,7 +79,7 @@ async function tokens(user, trx = db) {
   });
   return {
     user: publicUser(user),
-    access_token: jwt.sign({ role: user.role, name: user.name }, secret(), {
+    access_token: jwt.sign({ role: user.role, name: user.name, ver: user.token_version || 0 }, secret(), {
       algorithm: "HS256",
       subject: user.id,
       expiresIn: "15m",
@@ -145,7 +148,10 @@ export function authRoutes(app, limiter) {
     res.json(result);
   });
   app.post("/api/auth/logout", auth, async (req, res) => {
-    await db("refresh_tokens").where({ user_id: req.user.sub }).delete();
+    await db.transaction(async trx => {
+      await trx("refresh_tokens").where({user_id:req.user.sub}).delete();
+      await trx("users").where({id:req.user.sub}).increment("token_version",1);
+    });
     res.json({ message: "Signed out" });
   });
   app.get("/api/auth/me", auth, async (req, res) =>
@@ -168,12 +174,12 @@ export function authRoutes(app, limiter) {
         `reset:${id()}`,
         user.email,
         "Reset your Brightloop password",
-        `Single-use token (valid for 30 minutes): ${token}\nOpen the local login screen, choose Reset password, and paste this token.`,
+        `Reset your password within 30 minutes: ${process.env.PUBLIC_APP_URL || process.env.FRONTEND_ORIGIN || "http://localhost:5173"}/#reset=${encodeURIComponent(token)}\nIgnore this message if you did not request it.`,
       );
     }
     res.json({
       message:
-        "If the email is registered, reset instructions have been written to the local outbox.",
+        "If the email is registered, reset instructions have been queued for delivery.",
     });
   });
   app.post("/api/auth/reset-password", limiter, async (req, res) => {
@@ -191,7 +197,7 @@ export function authRoutes(app, limiter) {
         .where({ id: row.id, used: false })
         .update({ used: true });
       if (!used) fail(409, "Token already used");
-      await trx("users").where({ id: row.user_id }).update({ password_hash });
+      await trx("users").where({ id: row.user_id }).update({ password_hash }).increment("token_version",1);
       await trx("refresh_tokens").where({ user_id: row.user_id }).delete();
       await audit(
         trx,

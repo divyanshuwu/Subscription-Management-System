@@ -1,5 +1,5 @@
 {
-  "passed": 7,
+  "passed": 10,
   "checks": [
     "JWT login connects the real local API",
     "Subscription form writes to SQLite through REST",
@@ -7,7 +7,10 @@
     "Billing and invoice confirmation round-trip through REST",
     "Record payment updates the real invoice to Paid",
     "Advanced product editor performs authenticated PUT",
-    "Customer login receives only owned server-paginated records"
+    "Contract editor preserves layout and writes a prospective amendment",
+    "Server-backed customer picker finds customer beyond first 100",
+    "Customer login receives only owned server-paginated records",
+    "Customer can edit owned quantity without staff-only contract controls"
   ],
   "errors": []
 }

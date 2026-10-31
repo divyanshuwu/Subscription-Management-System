@@ -7,6 +7,14 @@ export async function upgrade(db) {
       // Quotes created before the upgrade did not have immutable calculated lines.
       await trx.schema.alterTable('quotations', t => { t.boolean('price_snapshot').notNullable().defaultTo(false); });
     }],
+    [2, async trx => {
+      await trx.schema.alterTable('notifications', t => {
+        t.string('delivery_status').notNullable().defaultTo('logged'); t.integer('attempts').notNullable().defaultTo(0);
+        t.string('next_attempt_at'); t.string('locked_at'); t.string('last_error'); t.string('sent_at'); t.text('attachments').notNullable().defaultTo('[]');
+      });
+      await trx.schema.alterTable('users', t => { t.integer('token_version').notNullable().defaultTo(0); });
+      await trx.schema.alterTable('subscriptions', t => {t.text('pending_lines'); t.string('pending_effective_date'); t.integer('revision').notNullable().defaultTo(0);});
+    }],
   ];
   for (const [version, up] of changes) {
     await db.transaction(async trx => {

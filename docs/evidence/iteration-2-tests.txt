@@ -1,0 +1,45 @@
+
+> brightloop-subscription-workspace@0.0.0 test
+> node --test backend/tests/*.test.mjs
+
+✔ regression: old active subscriptions and catalog records remain visible (60.049351ms)
+✔ regression: quotation price remains frozen across catalog edits (31.717791ms)
+✔ regression: confirmation preserves historical tax and discount snapshot (14.077669ms)
+✔ regression: pause/resume retains accrued unbilled periods (26.915618ms)
+✔ paused intervals skip only periods starting inside the pause and retain anchor (10.253641ms)
+✔ closing preserves previously accrued charges (14.330513ms)
+✔ regression: draft debt excluded and old confirmed debt reconciles with aging (28.480029ms)
+✔ regression: sub-cent payments rejected before creating zero-value entries (7.122631ms)
+✔ regression: full Draft to Quotation to Confirmed to Active sequence (11.561982ms)
+✔ billing anchors recover month-end and leap-year anniversaries (2.341587ms)
+✔ regression: historical revenue is independent of materialized summaries (5.774189ms)
+✔ versioned migration is repeatable and retains existing records (4.506142ms)
+✔ parallel confirmation never overspends final discount capacity (4.382923ms)
+✔ amendments preserve agreed prices, apply prospectively, and reject stale revisions (18.071626ms)
+✔ portal amendments enforce ownership, prevent contract overrides and keep cost private (12.183033ms)
+✔ global server search finds old records outside cached pages and scopes customers (6.556809ms)
+✔ session version revokes previously issued access tokens immediately (6.584097ms)
+✔ SMTP sends clickable resets and PDF attachments; failed delivery retries with one worker claim (363.549081ms)
+✔ M1: server rejects weak password; unique emails are case-insensitive (604.274019ms)
+✔ M1: unauthenticated calls are 401; customer and staff cannot add staff (265.871687ms)
+✔ M1: refresh tokens rotate and cannot be replayed (283.064973ms)
+✔ M2/M3: admin catalog CRUD, variant delta, plan availability, staff mutation 403 (24.263968ms)
+✔ M4: quote conversion is atomic, single-use, and rejects expired quotes (24.884374ms)
+✔ M5: illegal transitions return 409; pause and resume follow state machine (19.199779ms)
+✔ M7: expired and exhausted discounts are skipped; line tax precedes discount (12.587616ms)
+✔ M6: billing twice never duplicates an invoice; billing run scan is logged (12.426211ms)
+✔ M6/M7: confirmation consumes a capped discount exactly once (7.62651ms)
+✔ M8: partial payment stays Confirmed; exact balance transitions to Paid (9.284635ms)
+✔ M8: cancelled invoices, future payments, and overpayment are rejected (7.389519ms)
+✔ M9: server-side customer isolation covers lists, records, PDF and mutations (11.934646ms)
+✔ M6/M11: PDF is generated locally; notifications are idempotent (32.478179ms)
+✔ M10/M11: paginated date-bound reports, summaries and mutation audits (17.515986ms)
+✔ M1: reset tokens are expiring, single-use and password policy is enforced (526.998876ms)
+ℹ tests 33
+ℹ suites 0
+ℹ pass 33
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3177.462883

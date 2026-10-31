@@ -46,6 +46,11 @@ export type Subscription = {
   expiry_date: string;
   next_billing_date: string;
   payment_terms: number;
+  customer?: User;
+  revision?: number;
+  pending_lines?: Subscription["lines"];
+  pending_effective_date?: string;
+  pricing_preview?: {tax_total:number;total:number;lines: Subscription["lines"]};
   lines: {
     product_id: string;
     name: string;
@@ -453,6 +458,7 @@ export function seedData(): Data {
   };
 }
 export const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+let refreshing: Promise<boolean> | null = null;
 export async function request(
   path: string,
   options: RequestInit = {},
@@ -471,26 +477,18 @@ export async function request(
     localStorage.getItem("brightloop-refresh") &&
     !path.startsWith("/auth/")
   ) {
-    const refresh = await fetch(`${API_URL}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        refresh_token: localStorage.getItem("brightloop-refresh"),
-      }),
-    });
-    if (refresh.ok) {
-      const data = await refresh.json();
-      localStorage.setItem("brightloop-token", data.access_token);
-      localStorage.setItem("brightloop-refresh", data.refresh_token);
-      response = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${data.access_token}`,
-        },
-      });
+    if (!refreshing) refreshing = (async () => {
+      const refresh = await fetch(`${API_URL}/auth/refresh`, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({refresh_token:localStorage.getItem("brightloop-refresh")})});
+      if (!refresh.ok) return false;
+      const data = await refresh.json();localStorage.setItem("brightloop-token",data.access_token);localStorage.setItem("brightloop-refresh",data.refresh_token);return true;
+    })().finally(()=>{refreshing=null;});
+    if(await refreshing) response=await fetch(`${API_URL}${path}`,{...options,headers:{"Content-Type":"application/json",...options.headers,Authorization:`Bearer ${localStorage.getItem("brightloop-token")}`}});
+    else {
+      localStorage.removeItem("brightloop-token");localStorage.removeItem("brightloop-refresh");
+      window.dispatchEvent(new Event("brightloop-session-expired"));
     }
   }
+
   if (!response.ok) {
     const body = await response
       .json()
@@ -505,7 +503,7 @@ export async function request(
 }
 export function downloadCsv(name: string, rows: Record<string, unknown>[]) {
   const keys = Array.from(new Set(rows.flatMap(Object.keys)));
-  const cell = (v: unknown) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+  const cell = (v: unknown) => {const text=String(v ?? "");return `"${(/^[=+@\-\t\r]/.test(text)?"'":"")+text.replaceAll('"', '""')}"`;};
   const blob = new Blob(
     [
       keys.map(cell).join(",") +
